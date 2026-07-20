@@ -1,0 +1,231 @@
+# GymPact
+
+**GymPact** ist eine private, mobile-first Progressive Web App für Paare und
+kleine Freundesgruppen: Während einer zeitlich begrenzten Fitness-Challenge
+trackt jedes Mitglied seine täglichen Gewohnheiten und sieht den Fortschritt
+der anderen. Freundliche, niemals anonyme Erinnerungen halten alle bei der
+Stange – ganz ohne Social-Media-Lärm und aggressive Gamification.
+
+Die erste Challenge läuft vom **20. Juli 2026 bis 15. Oktober 2026**;
+beliebige Zeiträume werden unterstützt.
+
+---
+
+## Architektur
+
+**Entscheidung: „Thin Client, sicherer Kern in der Datenbank“.**
+Das React-Frontend spricht direkt mit Supabase (PostgREST, Auth, Realtime,
+Storage). Es gibt bewusst keinen eigenen API-Server – die Korrektheits- und
+Sicherheitsgarantien liegen in der Datenbank:
+
+- **Row Level Security auf jeder Tabelle** ist die einzige Wahrheit über
+  Zugriffsrechte. Der Client kann nichts erzwingen, was RLS nicht erlaubt.
+- **Alles Heikle läuft über SECURITY-DEFINER-RPCs** (`create_group`,
+  `join_group`, `leave_group`, `send_reminder`, …). Dort sitzen Validierung,
+  Cooldowns, Ruhezeiten-Checks – unabhängig von jeder Client-Validierung.
+- **Abgeleitete Werte werden serverseitig berechnet**: `habit_entries.completed`
+  setzt ein Trigger aus Typ + Zielwert; Datums-/Statusregeln für Check-ins
+  prüft ein Trigger (`validate_checkin`).
+- **Edge Functions nur für Dinge, die die DB nicht kann**: Web-Push-Versand
+  (VAPID-Private-Key!) und der Cron-Job für automatische Erinnerungen.
+  Der Service-Role-Key existiert ausschließlich dort.
+- **Frontend-State**: TanStack Query als Cache über PostgREST, Supabase
+  Realtime invalidiert gezielt (neue Benachrichtigungen, Gruppen-Check-ins).
+  Check-ins speichern sofort (Booleans) bzw. mit kurzem Debounce (Zahlen,
+  Gewicht, Notiz) – klassisches Autosave mit Statusanzeige.
+
+**Zeitzonen-Modell:** Die App rechnet konsequent mit *lokalen Kalenderdaten*
+(`YYYY-MM-DD`) in der Profil-Zeitzone des Nutzers – nie mit UTC-Mitternacht.
+Serverseitig liefert `user_local_date()` dasselbe Datum für RPC-Prüfungen.
+
+## Ordnerstruktur
+
+```
+GymPact/
+├── index.html                  # Shell, Theme-Bootstrapping, PWA-Meta
+├── public/
+│   ├── manifest.webmanifest    # PWA-Manifest
+│   ├── sw.js                   # Service Worker: App-Shell-Cache + Web Push
+│   └── icons/                  # generierte App-Icons (npm run icons)
+├── scripts/
+│   └── generate-icons.mjs      # PNG-Icon-Generator (ohne Abhängigkeiten)
+├── src/
+│   ├── main.tsx                # Einstieg: Provider, SW-Registrierung
+│   ├── App.tsx                 # Routen (öffentlich/geschützt)
+│   ├── index.css               # Tailwind + Basis-Styles (Safe-Areas, Fokus)
+│   ├── context/
+│   │   └── AuthProvider.tsx    # Supabase-Session als React-Context
+│   ├── hooks/
+│   │   ├── queries.ts          # ALLE Daten-Hooks (TanStack Query + Realtime)
+│   │   ├── useCheckinManager.ts# Autosave-Logik des Tages-Check-ins
+│   │   ├── useActiveGroup.ts   # aktive Gruppe (persistiert)
+│   │   ├── useToday.ts         # "heute" in der Nutzer-Zeitzone
+│   │   └── useTheme.ts         # Light/Dark/System
+│   ├── lib/
+│   │   ├── supabase.ts         # typisierter Client
+│   │   ├── database.types.ts   # handgepflegte Schema-Typen
+│   │   ├── dates.ts            # Kalenderdatum-Helfer (getestet)
+│   │   ├── stats.ts            # Serien, Quoten, Kennzahlen (getestet)
+│   │   ├── push.ts             # Push-Abo-Registrierung, iOS-Erkennung
+│   │   └── validation.ts       # Zod-Schemata aller Formulare
+│   ├── components/
+│   │   ├── AppLayout.tsx       # Header + Bottom-Navigation
+│   │   ├── RequireAuth.tsx     # Routen-Schutz
+│   │   ├── icons.tsx           # Inline-SVG-Icons
+│   │   ├── ui/                 # Button, Input, Toggle, Ring, Avatar, Toast …
+│   │   ├── checkin/            # HabitRow, SaveStatus
+│   │   └── charts/             # LineChart, WeekBars, CalendarGrid (SVG)
+│   └── pages/
+│       ├── auth/               # Login, Registrierung, Passwort-Reset
+│       ├── TodayPage.tsx       # Dashboard + Tages-Check-in
+│       ├── GroupPage.tsx       # Gruppe, Einladungen, Erinnerungen
+│       ├── NewChallengePage.tsx# Challenge- & Gewohnheiten-Builder
+│       ├── ProgressPage.tsx    # Kalender, Diagramme, Kennzahlen
+│       ├── NotificationsPage.tsx
+│       ├── SettingsPage.tsx    # Profil, Darstellung, Benachrichtigungen
+│       └── JoinPage.tsx        # /join/:code
+└── supabase/
+    ├── migrations/
+    │   ├── 0001_schema.sql     # Tabellen, Constraints, Trigger, Storage-Bucket
+    │   ├── 0002_rls.sql        # RLS-Policies + Hilfsfunktionen
+    │   ├── 0003_functions.sql  # RPCs (Gruppen, Reminder, Cooldowns)
+    │   └── 0004_realtime.sql   # Realtime-Publikationen
+    └── functions/
+        ├── _shared/lib.ts      # Service-Client, Web-Push, E-Mail, Zeit-Helfer
+        ├── send-push/          # stellt eine Notification per Push/E-Mail zu
+        └── auto-reminders/     # Cron: erinnert an offene Gewohnheiten
+```
+
+## Datenmodell (Kurzüberblick)
+
+| Tabelle | Zweck | Wichtige Constraints |
+| --- | --- | --- |
+| `profiles` | Anzeigename, Avatar, Zeitzone | 1:1 zu `auth.users`, Auto-Anlage per Trigger |
+| `groups` | private Gruppe | `invite_code` unique |
+| `group_members` | Mitgliedschaft + Rolle | PK `(group_id, user_id)`, Rolle `owner/member` |
+| `challenges` | Challenge einer Gruppe | **max. 1 aktive pro Gruppe** (partieller Unique-Index), `end >= start` |
+| `habits` | konfigurierbare Gewohnheiten | boolesch ohne / numerisch mit Zielwert (`check`), sortierbar |
+| `daily_checkins` | ein Eintrag pro Tag | **unique `(challenge_id, user_id, date)`**, Datum im Zeitraum (Trigger) |
+| `habit_entries` | Werte je Gewohnheit | unique `(checkin_id, habit_id)`, `completed` per Trigger berechnet |
+| `reminders` | manuelle Erinnerungen | unique `(sender, recipient, habit, date)` = Tages-Cooldown |
+| `notifications` | In-App-Postfach | Quelle für Push-/E-Mail-Zustellung |
+| `push_subscriptions` | Web-Push-Abo je Gerät | `endpoint` unique, nur Besitzer lesbar |
+| `notification_preferences` | Kanäle, Ruhezeiten, Auto-Reminder | 1:1 zu `profiles` |
+
+## Sicherheit
+
+- RLS auf **jeder** Tabelle; Mitglieder lesen nur Daten der eigenen Gruppen,
+  Check-ins/Einträge schreibt ausschließlich der Besitzer.
+- Erinnerungen entstehen **nur** über `send_reminder`: prüft Mitgliedschaft
+  beider Seiten, aktive Challenge, offene Gewohnheit, Ruhezeiten,
+  Empfänger-Einstellungen, 10-Minuten-Burst-Schutz und den Tages-Cooldown.
+- Push-Endpunkte/Schlüssel: RLS `user_id = auth.uid()`, kein öffentlicher Zugriff.
+- Keine Service-Role-Keys im Frontend; Secrets nur als Edge-Function-Secrets.
+- Validierung doppelt: Zod im Client, Constraints/Trigger/RPCs im Server.
+- XSS: React-Escaping, keine `dangerouslySetInnerHTML`. CSRF: tokenbasierte
+  Auth (Bearer JWT, kein Cookie-Implicit-Trust). Spam: serverseitige Cooldowns.
+
+---
+
+## Lokale Entwicklung
+
+```bash
+npm install
+cp .env.example .env        # Supabase-URL, Anon-Key, VAPID-Public-Key eintragen
+npm run dev                 # http://localhost:5173
+npm test                    # Unit-Tests (Statistik/Datum)
+npm run build               # Typecheck + Produktions-Build
+npm run icons               # App-Icons neu generieren
+```
+
+## Supabase einrichten
+
+1. Projekt auf [supabase.com](https://supabase.com) anlegen.
+2. Migrationen ausführen (Reihenfolge beachten):
+   ```bash
+   supabase link --project-ref <ref>
+   supabase db push          # führt supabase/migrations/*.sql aus
+   ```
+   Alternativ die vier Dateien nacheinander im SQL-Editor ausführen.
+3. **Auth**: E-Mail/Passwort-Provider aktivieren. Unter *URL Configuration*
+   die Site-URL (Produktion) und `http://localhost:5173` als Redirect-URL
+   eintragen (für Passwort-Reset und E-Mail-Bestätigung).
+4. `VITE_SUPABASE_URL` und `VITE_SUPABASE_ANON_KEY` in `.env` übernehmen.
+
+## Web Push einrichten
+
+1. VAPID-Schlüsselpaar erzeugen:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. Public Key ins Frontend: `VITE_VAPID_PUBLIC_KEY` in `.env`.
+3. Beide Schlüssel als Edge-Function-Secrets:
+   ```bash
+   supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... \
+     VAPID_SUBJECT=mailto:du@example.com
+   ```
+4. Edge Functions deployen:
+   ```bash
+   supabase functions deploy send-push
+   supabase functions deploy auto-reminders
+   ```
+5. Optional (empfohlen): **Database Webhook** anlegen –
+   *Database → Webhooks → neue Hook* auf `INSERT` in `public.notifications`,
+   Ziel: die `send-push`-Function. Dann wird jede Notification automatisch
+   zugestellt, auch wenn der Client den Aufruf nicht macht.
+
+**iOS-Hinweis:** Safari erlaubt Web Push nur für installierte PWAs. Die App
+erklärt das in den Einstellungen: *Teilen → „Zum Home-Bildschirm“*, danach
+lässt sich Push aktivieren.
+
+## Automatische Erinnerungen (Cron)
+
+Die Function `auto-reminders` prüft alle Nutzer mit aktivierter
+Auto-Erinnerung: Zeitzone, konfigurierte Uhrzeit (15-Minuten-Fenster),
+Ruhezeiten, aktive Challenge, offene `auto_remind`-Gewohnheiten und ob heute
+schon erinnert wurde. Zeitplan per `pg_cron` + `pg_net` (SQL-Editor):
+
+```sql
+select cron.schedule(
+  'gympact-auto-reminders',
+  '*/15 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://<ref>.supabase.co/functions/v1/auto-reminders',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer <SUPABASE_ANON_KEY>'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+## E-Mail-Fallback (optional)
+
+Über [Resend](https://resend.com): `supabase secrets set RESEND_API_KEY=... EMAIL_FROM="GymPact <noreply@deine-domain.de>"`.
+E-Mails gehen nur raus, wenn der Nutzer den Kanal aktiviert hat **und** kein
+Gerät per Push erreichbar war.
+
+## Deployment (Frontend)
+
+Statisches SPA – z. B. Vercel, Netlify oder Cloudflare Pages:
+
+1. Build-Command `npm run build`, Output `dist/`.
+2. Umgebungsvariablen `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
+   `VITE_VAPID_PUBLIC_KEY` setzen.
+3. SPA-Fallback aktivieren (alle Pfade → `/index.html`).
+   - Netlify: `/_redirects` mit `/* /index.html 200`
+   - Vercel: erkennt Vite automatisch
+4. HTTPS ist Pflicht (Service Worker + Push funktionieren nur über HTTPS).
+5. Produktions-URL in Supabase unter *Auth → URL Configuration* eintragen.
+
+## Tests & Fehlerbehandlung
+
+- `npm test`: Vitest-Suite für die kritische Fachlogik (Tagesquoten, Serien,
+  Wochenstatistik, Zeitzonen-Datumslogik) – 23 Tests.
+- Fehlerpfade: Formulare zeigen Feld- und Serverfehler; Autosave hat einen
+  sichtbaren Status (Speichert…/Gespeichert/Fehler); RPC-Fehlermeldungen
+  (z. B. Cooldown, Ruhezeit) erscheinen als Toast; abgelaufene Push-Abos
+  werden serverseitig aufgeräumt.
