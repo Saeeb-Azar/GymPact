@@ -7,6 +7,7 @@ import {
   fullDayCount,
   longestStreak,
   motivationalStatus,
+  overallCompletionRate,
   weekCompletionRate,
   type EntryLite,
   type HabitLite,
@@ -116,6 +117,21 @@ describe('Serien', () => {
     const days = computeDayCompletions('2026-07-20', '2026-07-25', habits, entriesByDate);
     expect(longestStreak(days)).toBe(3);
     expect(fullDayCount(days)).toBe(4);
+  });
+});
+
+describe('overallCompletionRate', () => {
+  it('mittelt die Erfüllung über alle Tage des Zeitraums', () => {
+    const entriesByDate = new Map<string, EntryLite[]>([
+      ['2026-07-20', [entry('training', true), entry('protein', true, 200)]], // 1.0
+      ['2026-07-21', [entry('training', true), entry('protein', false, 90)]], // 0.5
+      // 2026-07-22 kein Eintrag → 0.0
+    ]);
+    const days = computeDayCompletions('2026-07-20', '2026-07-22', habits, entriesByDate);
+    expect(overallCompletionRate(days)).toBeCloseTo(0.5);
+  });
+  it('ist 0 ohne Tage', () => {
+    expect(overallCompletionRate([])).toBe(0);
   });
 });
 

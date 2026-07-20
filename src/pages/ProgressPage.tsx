@@ -1,11 +1,18 @@
 // „Fortschritt“: Kalender, Wochenstatistik, Gewichtsverlauf und
 // Kennzahlen je Gewohnheit (z. B. Trainingsanzahl, Protein-Durchschnitt).
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthProvider';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useToday } from '@/hooks/useToday';
-import { useActiveChallenge, useMyChallengeCheckins } from '@/hooks/queries';
+import {
+  useActiveChallenge,
+  useChallengeGroupCheckins,
+  useChallengeRealtime,
+  useGroupMembers,
+  useMyChallengeCheckins,
+} from '@/hooks/queries';
 import {
   computeDayCompletions,
   computeHabitStats,
@@ -20,38 +27,59 @@ import { Button, Card, EmptyState, PageTitle, Spinner } from '@/components/ui/ba
 import { CalendarGrid } from '@/components/charts/CalendarGrid';
 import { LineChart } from '@/components/charts/LineChart';
 import { WeekBars } from '@/components/charts/WeekBars';
+import { GroupProgress } from '@/components/progress/GroupProgress';
+
+type ProgressView = 'me' | 'group';
+
+type ChallengeWithHabits = NonNullable<ReturnType<typeof useActiveChallenge>['data']>;
+type MyCheckins = ReturnType<typeof useMyChallengeCheckins>['data'];
+
+/** Persönliche Kennzahlen für die „Ich“-Ansicht. */
+function buildMyStats(
+  challenge: ChallengeWithHabits,
+  myCheckins: NonNullable<MyCheckins>,
+  today: DateString,
+) {
+  const entriesByDate = new Map<DateString, EntryLite[]>(
+    myCheckins.map((c) => [c.date, c.habit_entries]),
+  );
+  const until = today < challenge.end_date ? today : challenge.end_date;
+  const days = computeDayCompletions(
+    challenge.start_date,
+    until,
+    challenge.habits,
+    entriesByDate,
+  );
+  const last7Start = addDays(today, -6);
+  return {
+    days,
+    current: currentStreak(days, today),
+    longest: longestStreak(days),
+    week: weekCompletionRate(days, today),
+    fullDays: fullDayCount(days),
+    last7: days.filter((d) => d.date >= last7Start),
+    habitStats: computeHabitStats(challenge.habits, entriesByDate),
+  };
+}
 
 export function ProgressPage() {
+  const { user } = useAuth();
   const today = useToday();
+  const [view, setView] = useState<ProgressView>('me');
   const { activeGroupId, memberships, isLoading: groupsLoading } = useActiveGroup();
   const { data: challenge, isLoading: challengeLoading } =
     useActiveChallenge(activeGroupId);
   const { data: myCheckins = [], isLoading: checkinsLoading } =
     useMyChallengeCheckins(challenge?.id);
+  const { data: members = [] } = useGroupMembers(activeGroupId);
+  const { data: groupCheckins = [] } = useChallengeGroupCheckins(challenge?.id);
 
-  const stats = useMemo(() => {
-    if (!challenge) return null;
-    const entriesByDate = new Map<DateString, EntryLite[]>(
-      myCheckins.map((c) => [c.date, c.habit_entries]),
-    );
-    const until = today < challenge.end_date ? today : challenge.end_date;
-    const days = computeDayCompletions(
-      challenge.start_date,
-      until,
-      challenge.habits,
-      entriesByDate,
-    );
-    const last7Start = addDays(today, -6);
-    return {
-      days,
-      current: currentStreak(days, today),
-      longest: longestStreak(days),
-      week: weekCompletionRate(days, today),
-      fullDays: fullDayCount(days),
-      last7: days.filter((d) => d.date >= last7Start),
-      habitStats: computeHabitStats(challenge.habits, entriesByDate),
-    };
-  }, [challenge, myCheckins, today]);
+  useChallengeRealtime(challenge?.id);
+
+  const stats = useMemo(
+    () => (challenge ? buildMyStats(challenge, myCheckins, today) : null),
+    [challenge, myCheckins, today],
+  );
 
   if (groupsLoading || challengeLoading || checkinsLoading) {
     return (
@@ -83,6 +111,65 @@ export function ProgressPage() {
     <div className="space-y-4">
       <PageTitle>Fortschritt</PageTitle>
 
+      {/* Umschalter Ich / Gruppe */}
+      <div
+        role="tablist"
+        aria-label="Ansicht"
+        className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-100 p-1 dark:bg-surface-800"
+      >
+        {(
+          [
+            { key: 'me', label: 'Ich' },
+            { key: 'group', label: 'Gruppe' },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={view === tab.key}
+            onClick={() => setView(tab.key)}
+            className={`touch-target rounded-xl py-2 text-sm font-semibold transition-colors ${
+              view === tab.key
+                ? 'bg-white text-surface-900 shadow-sm dark:bg-surface-950 dark:text-surface-100'
+                : 'text-surface-900/50 dark:text-surface-100/50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'group' ? (
+        <GroupProgress
+          challenge={challenge}
+          members={members}
+          checkins={groupCheckins}
+          today={today}
+          currentUserId={user?.id ?? ''}
+        />
+      ) : (
+        <MyProgress
+          challenge={challenge}
+          stats={stats}
+          today={today}
+          weightPoints={weightPoints}
+        />
+      )}
+    </div>
+  );
+}
+
+interface MyProgressProps {
+  challenge: ChallengeWithHabits;
+  stats: ReturnType<typeof buildMyStats>;
+  today: DateString;
+  weightPoints: { label: string; value: number }[];
+}
+
+function MyProgress({ challenge, stats, today, weightPoints }: MyProgressProps) {
+  return (
+    <>
       {/* Kennzahlen */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard value={String(stats.current)} label="Aktuelle Serie" suffix=" Tage" />
@@ -164,7 +251,7 @@ export function ProgressPage() {
           days={stats.days}
         />
       </Card>
-    </div>
+    </>
   );
 }
 

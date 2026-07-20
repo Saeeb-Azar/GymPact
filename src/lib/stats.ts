@@ -108,6 +108,12 @@ export function fullDayCount(days: DayCompletion[]): number {
   return days.filter((d) => d.isFull).length;
 }
 
+/** Durchschnittliche Erfüllungsquote über den gesamten Zeitraum, 0..1. */
+export function overallCompletionRate(days: DayCompletion[]): number {
+  if (days.length === 0) return 0;
+  return days.reduce((acc, d) => acc + d.ratio, 0) / days.length;
+}
+
 export interface HabitStat {
   habitId: string;
   /** Boolesche Gewohnheit: Anzahl erledigter Tage. */

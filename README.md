@@ -74,13 +74,14 @@ GymPact/
 │   │   ├── icons.tsx           # Inline-SVG-Icons
 │   │   ├── ui/                 # Button, Input, Toggle, Ring, Avatar, Toast …
 │   │   ├── checkin/            # HabitRow, SaveStatus, PersonalTargetsForm
-│   │   └── charts/             # LineChart, WeekBars, CalendarGrid (SVG)
+│   │   ├── charts/             # LineChart, WeekBars, CalendarGrid (SVG)
+│   │   └── progress/           # GroupProgress (gemeinsame Gruppenansicht)
 │   └── pages/
 │       ├── auth/               # Login, Registrierung, Passwort-Reset
 │       ├── TodayPage.tsx       # Dashboard + Tages-Check-in
 │       ├── GroupPage.tsx       # Gruppe, Einladungen, Erinnerungen
 │       ├── NewChallengePage.tsx# Challenge- & Gewohnheiten-Builder
-│       ├── ProgressPage.tsx    # Kalender, Diagramme, Kennzahlen
+│       ├── ProgressPage.tsx    # Umschalter Ich/Gruppe: Diagramme, Kalender, Gruppenansicht
 │       ├── NotificationsPage.tsx
 │       ├── SettingsPage.tsx    # Profil, Darstellung, Benachrichtigungen
 │       ├── AdminPage.tsx       # App-weite Übersicht (nur für Admins)
@@ -205,6 +206,25 @@ select cron.schedule(
   $$
 );
 ```
+
+## Gruppenansicht (Fortschritt → „Gruppe“)
+
+Der Fortschritt-Tab hat oben einen Umschalter **Ich / Gruppe**. Die
+Gruppenansicht zeigt live (Supabase Realtime), wie weit alle sind:
+
+- **Heute als Gruppe** – gemeinsamer Fortschrittsring (Durchschnitt) und
+  wie viele Personen schon komplett sind.
+- **Wer ist wie weit?** – jede Person mit Avatar + Mini-Ring, offenen
+  Gewohnheiten als Chips und aktueller Serie, dezent nach Tagesfortschritt
+  sortiert (ohne Ranglisten-Nummern).
+- **Was fehlt heute noch?** – je Gewohnheit ein Balken „x/n erledigt“ plus
+  die Avatare derjenigen, bei denen sie noch offen ist.
+- **Gesamt-Fortschritt** – Balkenvergleich der durchschnittlichen Erfüllung
+  seit dem Start, mit vollen Tagen je Person.
+
+Alle Werte stammen aus `daily_checkins`/`habit_entries` und respektieren die
+persönlichen Zielwerte (das `completed`-Flag wird serverseitig je Nutzer
+berechnet). Private Notizen und Gewicht bleiben außen vor.
 
 ## Persönliche Zielwerte
 

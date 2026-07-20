@@ -372,6 +372,26 @@ export function useMyChallengeCheckins(challengeId: string | undefined) {
   });
 }
 
+/**
+ * Alle Check-ins ALLER Mitglieder über die ganze Challenge (Gruppenansicht).
+ * RLS erlaubt Mitgliedern, die Check-ins ihrer Gruppe zu lesen.
+ */
+export function useChallengeGroupCheckins(challengeId: string | undefined) {
+  return useQuery({
+    queryKey: ['challenge-group-checkins', challengeId ?? 'none'],
+    enabled: !!challengeId,
+    queryFn: async (): Promise<CheckinWithEntries[]> => {
+      const { data, error } = await supabase
+        .from('daily_checkins')
+        .select('*, habit_entries(*)')
+        .eq('challenge_id', challengeId!)
+        .order('date', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as CheckinWithEntries[];
+    },
+  });
+}
+
 /** Letzte Aktivitäten der Gruppe: jüngste Check-in-Updates. */
 export function useRecentActivity(challengeId: string | undefined) {
   return useQuery({
@@ -500,6 +520,9 @@ export function useChallengeRealtime(challengeId: string | undefined) {
     const invalidate = () => {
       queryClient.invalidateQueries({ queryKey: ['group-checkins', challengeId] });
       queryClient.invalidateQueries({ queryKey: ['recent-activity', challengeId] });
+      queryClient.invalidateQueries({
+        queryKey: ['challenge-group-checkins', challengeId],
+      });
     };
     const channel = supabase
       .channel(`challenge-${challengeId}`)
