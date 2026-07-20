@@ -40,12 +40,14 @@ import {
 } from '@/components/ui/basics';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui/toast';
+import { OnboardingGuide } from '@/components/OnboardingGuide';
 import { IconLogout, IconSettings } from '@/components/icons';
 
 export function SettingsPage() {
   const { user, signOut } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const isAdmin = useIsAdmin();
+  const [showGuide, setShowGuide] = useState(false);
 
   if (isLoading || !profile || !user) {
     return (
@@ -76,7 +78,11 @@ export function SettingsPage() {
           </Card>
         </Link>
       )}
+      {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
       <Card className="space-y-3">
+        <Button variant="secondary" className="w-full" onClick={() => setShowGuide(true)}>
+          Anleitung ansehen (Erste Schritte)
+        </Button>
         <Button
           variant="secondary"
           className="w-full"

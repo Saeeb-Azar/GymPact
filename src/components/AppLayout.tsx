@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useNotificationsRealtime, useUnreadCount } from '@/hooks/queries';
 import { useToast } from './ui/toast';
+import { OnboardingGuide, useOnboarding } from './OnboardingGuide';
 import {
   IconBell,
   IconGroup,
@@ -21,11 +22,16 @@ export function AppLayout() {
   const unread = useUnreadCount();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const onboarding = useOnboarding();
 
   // Neue Benachrichtigungen live als Toast anzeigen
   useNotificationsRealtime((notification) => {
     showToast(notification.title, 'info');
   });
+
+  if (onboarding.open) {
+    return <OnboardingGuide onClose={onboarding.close} />;
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
