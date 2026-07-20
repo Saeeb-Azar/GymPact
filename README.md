@@ -95,7 +95,7 @@ GymPact/
     │   ├── 0005_admin.sql      # App-weiter Admin-Zugang (app_admins, Policies)
     │   └── 0006_habit_targets.sql # persönliche Zielwerte je Nutzer
     └── functions/
-        ├── _shared/lib.ts      # Service-Client, Web-Push, E-Mail, Zeit-Helfer
+        │                       # (Functions sind eigenständig – ohne Shared-Imports)
         ├── send-push/          # stellt eine Notification per Push/E-Mail zu
         └── auto-reminders/     # Cron: erinnert an offene Gewohnheiten
 ```
@@ -159,29 +159,52 @@ npm run icons               # App-Icons neu generieren
 
 ## Web Push einrichten
 
-1. VAPID-Schlüsselpaar erzeugen:
+**Ohne diesen Schritt kommt nie eine Push-Benachrichtigung an**, egal wie die
+Schalter stehen: Die Schalter speichern nur eine Präferenz, verschickt wird
+die Nachricht von der Edge Function `send-push`. Beide Functions sind
+bewusst in sich geschlossen (keine Shared-Imports), damit sie sich sowohl per
+CLI als auch direkt im **Supabase-Dashboard** deployen lassen.
+
+1. VAPID-Schlüsselpaar erzeugen (einmalig):
    ```bash
    npx web-push generate-vapid-keys
    ```
-2. Public Key ins Frontend: `VITE_VAPID_PUBLIC_KEY` in `.env`.
-3. Beide Schlüssel als Edge-Function-Secrets:
-   ```bash
-   supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... \
-     VAPID_SUBJECT=mailto:du@example.com
-   ```
-4. Edge Functions deployen:
-   ```bash
-   supabase functions deploy send-push
-   supabase functions deploy auto-reminders
-   ```
-5. Optional (empfohlen): **Database Webhook** anlegen –
-   *Database → Webhooks → neue Hook* auf `INSERT` in `public.notifications`,
-   Ziel: die `send-push`-Function. Dann wird jede Notification automatisch
-   zugestellt, auch wenn der Client den Aufruf nicht macht.
+2. Public Key ins Frontend: `VITE_VAPID_PUBLIC_KEY` (Hostinger-Env-Var + `.env`)
+   – danach neu bauen/deployen.
+3. VAPID-Secrets für die Edge Functions setzen.
+4. Beide Functions `send-push` und `auto-reminders` deployen.
+5. Optional (empfohlen): **Database Webhook** – *Database → Webhooks → neue
+   Hook* auf `INSERT` in `public.notifications`, Ziel: `send-push`. Dann wird
+   jede Notification automatisch zugestellt, auch ohne Client-Aufruf.
 
-**iOS-Hinweis:** Safari erlaubt Web Push nur für installierte PWAs. Die App
-erklärt das in den Einstellungen: *Teilen → „Zum Home-Bildschirm“*, danach
-lässt sich Push aktivieren.
+### Variante A – Supabase-Dashboard (ohne CLI)
+
+- **Secrets:** *Edge Functions → Secrets* (bzw. *Project Settings → Edge
+  Functions*): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+  `VAPID_SUBJECT` = `mailto:deine-mail@example.com` eintragen. (Optional für
+  E-Mail: `RESEND_API_KEY`, `EMAIL_FROM`.)
+- **Deploy:** *Edge Functions → Deploy a new function*, Name exakt
+  `send-push`, den kompletten Inhalt von
+  `supabase/functions/send-push/index.ts` einfügen, deployen. Dasselbe mit
+  `auto-reminders`.
+
+### Variante B – Supabase CLI
+
+```bash
+supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... \
+  VAPID_SUBJECT=mailto:du@example.com
+supabase functions deploy send-push
+supabase functions deploy auto-reminders
+```
+
+**iOS-Voraussetzungen** (alle müssen erfüllt sein, sonst kommt keine Push):
+1. iOS 16.4 oder neuer.
+2. App über *Teilen → „Zum Home-Bildschirm“* installiert und **von dort**
+   (nicht aus Safari) geöffnet.
+3. In *Einstellungen → Benachrichtigungen* den Geräte-Button **„Aktivieren“**
+   gedrückt und die Berechtigung erlaubt (der „Web-Push“-Schalter allein legt
+   noch kein Abo an – erst „Aktivieren“ registriert das Push-Abonnement).
+4. `send-push` ist deployt und die VAPID-Secrets sind gesetzt (siehe oben).
 
 ## Automatische Erinnerungen (Cron)
 
