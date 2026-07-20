@@ -83,13 +83,15 @@ GymPact/
 │       ├── ProgressPage.tsx    # Kalender, Diagramme, Kennzahlen
 │       ├── NotificationsPage.tsx
 │       ├── SettingsPage.tsx    # Profil, Darstellung, Benachrichtigungen
+│       ├── AdminPage.tsx       # App-weite Übersicht (nur für Admins)
 │       └── JoinPage.tsx        # /join/:code
 └── supabase/
     ├── migrations/
     │   ├── 0001_schema.sql     # Tabellen, Constraints, Trigger, Storage-Bucket
     │   ├── 0002_rls.sql        # RLS-Policies + Hilfsfunktionen
     │   ├── 0003_functions.sql  # RPCs (Gruppen, Reminder, Cooldowns)
-    │   └── 0004_realtime.sql   # Realtime-Publikationen
+    │   ├── 0004_realtime.sql   # Realtime-Publikationen
+    │   └── 0005_admin.sql      # App-weiter Admin-Zugang (app_admins, Policies)
     └── functions/
         ├── _shared/lib.ts      # Service-Client, Web-Push, E-Mail, Zeit-Helfer
         ├── send-push/          # stellt eine Notification per Push/E-Mail zu
@@ -201,6 +203,28 @@ select cron.schedule(
   $$
 );
 ```
+
+## Admin-Bereich einrichten
+
+GymPact kennt neben den Gruppen-Rollen `owner`/`member` optional einen
+**App-weiten Admin-Zugang** (Migration `0005_admin.sql`): Admins sehen unter
+`/admin` (Link erscheint automatisch in den Einstellungen) alle Gruppen,
+Mitgliederzahlen und Challenges gruppenübergreifend und können Gruppen
+löschen. Bewusst **nicht** einsehbar: private Check-ins, Notizen, Gewicht,
+Erinnerungen, Benachrichtigungen und Push-Abos anderer Nutzer.
+
+Admin-Rechte werden aus Sicherheitsgründen **nicht** über die App vergeben,
+sondern nur manuell im SQL-Editor – dafür gibt es keine RPC, also keinen
+Codepfad, über den sich jemand selbst zum Admin machen könnte:
+
+```sql
+-- Erst nachdem sich die Person mit dieser E-Mail-Adresse registriert hat:
+insert into public.app_admins (user_id)
+select id from auth.users where email = 'deine-email@example.com'
+on conflict (user_id) do nothing;
+```
+
+Admin-Rechte entziehen: `delete from public.app_admins where user_id = '<uuid>';`
 
 ## E-Mail-Fallback (optional)
 

@@ -517,3 +517,80 @@ export function useUpdateNotificationPreferences() {
     },
   });
 }
+
+// ---------------------------------------------------------------- Admin
+// Bewusst getrennt von Gruppen-Rollen: ein App-Admin sieht Gruppen,
+// Mitgliedschaften, Challenges und Profile über alle Gruppen hinweg –
+// aber nicht die privaten Check-ins, Notizen oder Push-Abos anderer
+// Nutzer. Admin-Rechte werden ausschließlich manuell im SQL-Editor
+// vergeben (siehe supabase/migrations/0005_admin.sql).
+
+export interface AdminGroupOverview extends GroupRow {
+  group_members: Array<
+    Pick<GroupMemberRow, 'user_id' | 'role'> & {
+      profiles: Pick<ProfileRow, 'display_name'>;
+    }
+  >;
+  challenges: ChallengeRow[];
+}
+
+/** true, sobald bekannt ist, ob der Nutzer Admin ist – sonst undefined während des Ladens. */
+export function useIsAdmin(): boolean | undefined {
+  const { user } = useAuth();
+  const { data, isLoading } = useQuery({
+    queryKey: ['is-admin', user?.id ?? 'anon'],
+    enabled: !!user,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase
+        .from('app_admins')
+        .select('user_id')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+  });
+  if (!user || isLoading) return undefined;
+  return data ?? false;
+}
+
+export function useAdminOverview() {
+  return useQuery({
+    queryKey: ['admin-overview'],
+    queryFn: async (): Promise<AdminGroupOverview[]> => {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('*, group_members(user_id, role, profiles(display_name)), challenges(*)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as AdminGroupOverview[];
+    },
+  });
+}
+
+export function useAdminUserCount() {
+  return useQuery({
+    queryKey: ['admin-user-count'],
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true });
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
+export function useAdminDeleteGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (groupId: string) => {
+      const { error } = await supabase.from('groups').delete().eq('id', groupId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-user-count'] });
+    },
+  });
+}

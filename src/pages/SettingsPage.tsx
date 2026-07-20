@@ -2,11 +2,13 @@
 // Benachrichtigungen inkl. Web-Push und Ruhezeiten, Abmelden.
 
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
 import {
+  useIsAdmin,
   useNotificationPreferences,
   useProfile,
   useUpdateNotificationPreferences,
@@ -34,11 +36,12 @@ import {
 } from '@/components/ui/basics';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui/toast';
-import { IconLogout } from '@/components/icons';
+import { IconLogout, IconSettings } from '@/components/icons';
 
 export function SettingsPage() {
   const { user, signOut } = useAuth();
   const { data: profile, isLoading } = useProfile();
+  const isAdmin = useIsAdmin();
 
   if (isLoading || !profile || !user) {
     return (
@@ -60,6 +63,14 @@ export function SettingsPage() {
       />
       <AppearanceSection />
       <NotificationSection userId={user.id} />
+      {isAdmin && (
+        <Link to="/admin">
+          <Card className="flex items-center gap-3">
+            <IconSettings size={20} className="text-brand-700 dark:text-brand-300" />
+            <span className="font-medium">Admin-Bereich</span>
+          </Card>
+        </Link>
+      )}
       <Card className="space-y-3">
         <Button
           variant="secondary"

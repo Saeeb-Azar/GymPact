@@ -133,6 +133,11 @@ export type NotificationPreferencesRow = {
   updated_at: string;
 }
 
+export type AppAdminRow = {
+  user_id: string;
+  granted_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -239,6 +244,12 @@ export type Database = {
         Row: NotificationPreferencesRow;
         Insert: Partial<NotificationPreferencesRow> & { user_id: string };
         Update: Partial<NotificationPreferencesRow>;
+        Relationships: [];
+      };
+      app_admins: {
+        Row: AppAdminRow;
+        Insert: never; // nur manuell im SQL-Editor
+        Update: never;
         Relationships: [];
       };
     };
