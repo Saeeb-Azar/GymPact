@@ -16,6 +16,7 @@ import type {
   GroupRow,
   HabitEntryRow,
   HabitRow,
+  HabitTargetRow,
   NotificationPreferencesRow,
   NotificationRow,
   ProfileRow,
@@ -194,6 +195,47 @@ export function useActiveChallenge(groupId: string | undefined) {
       const challenge = data as unknown as ChallengeWithHabits;
       challenge.habits.sort((a, b) => a.sort_order - b.sort_order);
       return challenge;
+    },
+  });
+}
+
+// ---------------------------------------------------------------- Persönliche Zielwerte
+// Das Thema einer numerischen Gewohnheit ist für die Gruppe gleich, der
+// Zielwert aber pro Person unterschiedlich (z. B. Protein: 180 g vs. 160 g).
+
+export function useMyHabitTargets() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-habit-targets', user?.id ?? 'anon'],
+    enabled: !!user,
+    queryFn: async (): Promise<HabitTargetRow[]> => {
+      const { data, error } = await supabase
+        .from('habit_targets')
+        .select('*')
+        .eq('user_id', user!.id);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useSetHabitTarget() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { habitId: string; targetValue: number }) => {
+      const { error } = await supabase.from('habit_targets').upsert(
+        {
+          habit_id: input.habitId,
+          user_id: user!.id,
+          target_value: input.targetValue,
+        },
+        { onConflict: 'habit_id,user_id' },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-habit-targets', user?.id ?? 'anon'] });
     },
   });
 }

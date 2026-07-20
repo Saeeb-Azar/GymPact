@@ -64,6 +64,13 @@ export type HabitRow = {
   created_at: string;
 }
 
+export type HabitTargetRow = {
+  habit_id: string;
+  user_id: string;
+  target_value: number;
+  updated_at: string;
+}
+
 export type DailyCheckinRow = {
   id: string;
   challenge_id: string;
@@ -250,6 +257,16 @@ export type Database = {
         Row: AppAdminRow;
         Insert: never; // nur manuell im SQL-Editor
         Update: never;
+        Relationships: [];
+      };
+      habit_targets: {
+        Row: HabitTargetRow;
+        Insert: {
+          habit_id: string;
+          user_id: string;
+          target_value: number;
+        };
+        Update: Partial<Pick<HabitTargetRow, 'target_value'>>;
         Relationships: [];
       };
     };

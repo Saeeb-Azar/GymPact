@@ -209,9 +209,10 @@ export function NewChallengePage() {
                         {type === 'numeric' && (
                           <div className="grid grid-cols-2 gap-2">
                             <Field
-                              label="Ziel"
+                              label="Standardwert"
                               htmlFor={`habit-target-${index}`}
                               error={habitErrors?.targetValue?.message}
+                              hint="Jede Person kann später ihr eigenes Ziel eintragen."
                             >
                               <Input
                                 id={`habit-target-${index}`}

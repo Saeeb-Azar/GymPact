@@ -13,6 +13,7 @@ import {
   useGroupCheckins,
   useGroupMembers,
   useMyChallengeCheckins,
+  useMyHabitTargets,
   useRecentActivity,
 } from '@/hooks/queries';
 import {
@@ -30,6 +31,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { Avatar } from '@/components/ui/Avatar';
 import { HabitCheckRow } from '@/components/checkin/HabitRow';
 import { SaveStatusIndicator } from '@/components/checkin/SaveStatus';
+import { PersonalTargetsForm } from '@/components/checkin/PersonalTargetsForm';
 import { IconFlame } from '@/components/icons';
 import { Input, Textarea } from '@/components/ui/basics';
 
@@ -42,7 +44,31 @@ export function TodayPage() {
 
   useChallengeRealtime(challenge?.id);
 
-  const manager = useCheckinManager(challenge, today);
+  const { data: myTargets = [] } = useMyHabitTargets();
+
+  // Persönliche Zielwerte über die Standardwerte der Challenge legen –
+  // das Thema ist für die Gruppe gleich, der Zielwert aber pro Person.
+  const effectiveChallenge = useMemo(() => {
+    if (!challenge) return challenge;
+    return {
+      ...challenge,
+      habits: challenge.habits.map((habit) => {
+        if (habit.type !== 'numeric') return habit;
+        const personal = myTargets.find((t) => t.habit_id === habit.id);
+        return personal ? { ...habit, target_value: personal.target_value } : habit;
+      }),
+    };
+  }, [challenge, myTargets]);
+
+  const missingNumericHabits = useMemo(
+    () =>
+      (challenge?.habits ?? []).filter(
+        (h) => h.type === 'numeric' && !myTargets.some((t) => t.habit_id === h.id),
+      ),
+    [challenge, myTargets],
+  );
+
+  const manager = useCheckinManager(effectiveChallenge, today);
   const { data: members = [] } = useGroupMembers(activeGroupId);
   const { data: groupCheckins = [] } = useGroupCheckins(challenge?.id, today);
   const { data: myCheckins = [] } = useMyChallengeCheckins(challenge?.id);
@@ -159,8 +185,13 @@ export function TodayPage() {
         </div>
       </Card>
 
+      {/* ------------------------------------------------ Persönliche Ziele */}
+      {!notStarted && !finished && missingNumericHabits.length > 0 && (
+        <PersonalTargetsForm habits={missingNumericHabits} />
+      )}
+
       {/* ------------------------------------------------ Tages-Check-in */}
-      {!notStarted && !finished && (
+      {!notStarted && !finished && missingNumericHabits.length === 0 && (
         <Card className="animate-fade-up">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">
@@ -173,7 +204,7 @@ export function TodayPage() {
           </p>
 
           <div className="mt-2 divide-y divide-surface-100 dark:divide-surface-800">
-            {challenge.habits.map((habit) => (
+            {(effectiveChallenge?.habits ?? []).map((habit) => (
               <HabitCheckRow
                 key={habit.id}
                 habit={habit}

@@ -7,10 +7,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
 import {
+  useActiveChallenge,
   useIsAdmin,
+  useMyHabitTargets,
   useNotificationPreferences,
   useProfile,
+  useSetHabitTarget,
   useUpdateNotificationPreferences,
   useUpdateProfile,
 } from '@/hooks/queries';
@@ -61,6 +65,7 @@ export function SettingsPage() {
         avatarUrl={profile.avatar_url}
         timezone={profile.timezone}
       />
+      <MyGoalsSection />
       <AppearanceSection />
       <NotificationSection userId={user.id} />
       {isAdmin && (
@@ -218,6 +223,66 @@ function ProfileSection({
           </Button>
         )}
       </form>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------- Meine Ziele
+// Persönliche Zielwerte für numerische Gewohnheiten der aktiven Challenge –
+// das Thema ist für die Gruppe gleich, der Zielwert aber individuell.
+function MyGoalsSection() {
+  const { activeGroupId } = useActiveGroup();
+  const { data: challenge } = useActiveChallenge(activeGroupId);
+  const { data: targets = [] } = useMyHabitTargets();
+  const setTarget = useSetHabitTarget();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const timers = useRef<Record<string, number>>({});
+
+  const numericHabits = (challenge?.habits ?? []).filter((h) => h.type === 'numeric');
+  if (!challenge || numericHabits.length === 0) return null;
+
+  const valueFor = (habitId: string): string => {
+    if (drafts[habitId] !== undefined) return drafts[habitId];
+    const target = targets.find((t) => t.habit_id === habitId);
+    return target ? String(target.target_value) : '';
+  };
+
+  const onChange = (habitId: string, raw: string) => {
+    setDrafts((prev) => ({ ...prev, [habitId]: raw }));
+    if (timers.current[habitId]) window.clearTimeout(timers.current[habitId]);
+    timers.current[habitId] = window.setTimeout(() => {
+      const parsed = Number(raw.trim().replace(',', '.'));
+      if (raw.trim() === '' || Number.isNaN(parsed) || parsed <= 0) return;
+      setTarget.mutate({ habitId, targetValue: parsed });
+    }, 700);
+  };
+
+  return (
+    <Card>
+      <h2 className="text-base font-semibold">Meine Ziele</h2>
+      <p className="mt-1 text-sm text-surface-900/60 dark:text-surface-100/60">
+        Deine persönlichen Zielwerte für „{challenge.name}“ – unabhängig von den
+        Zielen deiner Gruppenmitglieder.
+      </p>
+      <div className="mt-3 space-y-3">
+        {numericHabits.map((habit) => (
+          <Field key={habit.id} label={habit.name} htmlFor={`goal-${habit.id}`}>
+            <div className="flex items-center gap-2">
+              <Input
+                id={`goal-${habit.id}`}
+                type="text"
+                inputMode="decimal"
+                value={valueFor(habit.id)}
+                onChange={(e) => onChange(habit.id, e.target.value)}
+                className="text-right tabular-nums"
+              />
+              <span className="w-8 shrink-0 text-sm text-surface-900/50 dark:text-surface-100/50">
+                {habit.unit ?? ''}
+              </span>
+            </div>
+          </Field>
+        ))}
+      </div>
     </Card>
   );
 }

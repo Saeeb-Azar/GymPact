@@ -73,7 +73,7 @@ GymPact/
 │   │   ├── RequireAuth.tsx     # Routen-Schutz
 │   │   ├── icons.tsx           # Inline-SVG-Icons
 │   │   ├── ui/                 # Button, Input, Toggle, Ring, Avatar, Toast …
-│   │   ├── checkin/            # HabitRow, SaveStatus
+│   │   ├── checkin/            # HabitRow, SaveStatus, PersonalTargetsForm
 │   │   └── charts/             # LineChart, WeekBars, CalendarGrid (SVG)
 │   └── pages/
 │       ├── auth/               # Login, Registrierung, Passwort-Reset
@@ -91,7 +91,8 @@ GymPact/
     │   ├── 0002_rls.sql        # RLS-Policies + Hilfsfunktionen
     │   ├── 0003_functions.sql  # RPCs (Gruppen, Reminder, Cooldowns)
     │   ├── 0004_realtime.sql   # Realtime-Publikationen
-    │   └── 0005_admin.sql      # App-weiter Admin-Zugang (app_admins, Policies)
+    │   ├── 0005_admin.sql      # App-weiter Admin-Zugang (app_admins, Policies)
+    │   └── 0006_habit_targets.sql # persönliche Zielwerte je Nutzer
     └── functions/
         ├── _shared/lib.ts      # Service-Client, Web-Push, E-Mail, Zeit-Helfer
         ├── send-push/          # stellt eine Notification per Push/E-Mail zu
@@ -106,7 +107,8 @@ GymPact/
 | `groups` | private Gruppe | `invite_code` unique |
 | `group_members` | Mitgliedschaft + Rolle | PK `(group_id, user_id)`, Rolle `owner/member` |
 | `challenges` | Challenge einer Gruppe | **max. 1 aktive pro Gruppe** (partieller Unique-Index), `end >= start` |
-| `habits` | konfigurierbare Gewohnheiten | boolesch ohne / numerisch mit Zielwert (`check`), sortierbar |
+| `habits` | konfigurierbare Gewohnheiten | boolesch ohne / numerisch mit Standard-Zielwert (`check`), sortierbar |
+| `habit_targets` | persönlicher Zielwert je Nutzer | PK `(habit_id, user_id)`, überschreibt den Standardwert der Gewohnheit |
 | `daily_checkins` | ein Eintrag pro Tag | **unique `(challenge_id, user_id, date)`**, Datum im Zeitraum (Trigger) |
 | `habit_entries` | Werte je Gewohnheit | unique `(checkin_id, habit_id)`, `completed` per Trigger berechnet |
 | `reminders` | manuelle Erinnerungen | unique `(sender, recipient, habit, date)` = Tages-Cooldown |
@@ -203,6 +205,21 @@ select cron.schedule(
   $$
 );
 ```
+
+## Persönliche Zielwerte
+
+Numerische Gewohnheiten (z. B. „Protein erreicht“) haben ein gemeinsames
+**Thema** für die ganze Gruppe, aber einen **persönlichen Zielwert** je
+Nutzer – die eine nimmt 180 g Protein, der andere 160 g. `habits.target_value`
+ist dabei der Standard-/Vorschlagswert, den der Owner beim Anlegen der
+Challenge setzt; `habit_targets` überschreibt ihn pro Nutzer.
+
+Sobald ein Mitglied eine aktive Challenge mit numerischen Gewohnheiten sieht,
+für die es noch kein eigenes Ziel eingetragen hat (z. B. direkt nach dem
+Beitritt über den Einladungslink), zeigt „Heute“ statt des Check-ins zuerst
+ein Formular zum Eintragen der persönlichen Ziele – der Check-in selbst bleibt
+so lange gesperrt. Ziele lassen sich danach jederzeit unter *Einstellungen →
+Meine Ziele* anpassen.
 
 ## Admin-Bereich einrichten
 
