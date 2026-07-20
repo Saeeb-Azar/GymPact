@@ -210,7 +210,7 @@ Gerät per Push erreichbar war.
 
 ## Deployment (Frontend)
 
-Statisches SPA – z. B. Vercel, Netlify oder Cloudflare Pages:
+Statisches SPA – z. B. Vercel, Netlify, Cloudflare Pages oder Hostinger:
 
 1. Build-Command `npm run build`, Output `dist/`.
 2. Umgebungsvariablen `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
@@ -220,6 +220,36 @@ Statisches SPA – z. B. Vercel, Netlify oder Cloudflare Pages:
    - Vercel: erkennt Vite automatisch
 4. HTTPS ist Pflicht (Service Worker + Push funktionieren nur über HTTPS).
 5. Produktions-URL in Supabase unter *Auth → URL Configuration* eintragen.
+
+### Deployment auf Hostinger
+
+Wichtig: `VITE_*`-Variablen werden **beim Build** in den JS-Code eingebacken,
+nicht zur Laufzeit vom Server gelesen. Bei Hostinger-Webhosting (Shared/Cloud,
+Apache/LiteSpeed) läuft kein Node-Prozess für die App – es genügt aber ein
+statischer Build:
+
+1. `.env` lokal mit den echten Werten befüllen (siehe oben) und bauen:
+   ```bash
+   npm run build
+   ```
+2. Den **Inhalt** von `dist/` (nicht den Ordner selbst) per hPanel-Dateimanager
+   oder FTP/SFTP nach `public_html` hochladen (bzw. `public_html/<unterordner>`,
+   falls die App nicht auf der Domain-Wurzel laufen soll).
+3. `public/.htaccess` wird beim Build automatisch mit nach `dist/` kopiert und
+   sorgt für SPA-Routing (kein 404 bei Reload auf `/progress` etc.), korrekte
+   Cache-Header für den Service Worker und HTTPS-Erzwingung.
+4. Kostenloses SSL in hPanel aktivieren (Websites → SSL), falls nicht schon
+   automatisch aktiv.
+5. Produktions-Domain in Supabase unter *Auth → URL Configuration* als
+   Site-URL/Redirect-URL eintragen (sonst schlagen Passwort-Reset und
+   E-Mail-Bestätigung fehl).
+6. Bei jeder Änderung: neu bauen und `dist/` erneut hochladen – es gibt kein
+   automatisches CI/CD, außer du richtest z. B. eine GitHub Action ein, die
+   per FTP/SFTP nach Hostinger deployt.
+
+Falls du stattdessen einen Hostinger-VPS mit eigenem Nginx/Node betreibst,
+gilt das gleiche Prinzip (statischer Build + Reverse Proxy mit SPA-Fallback);
+dann lassen sich Env-Variablen auch in einer Build-Pipeline auf dem VPS setzen.
 
 ## Tests & Fehlerbehandlung
 
