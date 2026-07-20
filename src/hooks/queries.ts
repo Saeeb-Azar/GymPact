@@ -132,7 +132,7 @@ export function useCreateGroup() {
   return useMutation({
     mutationFn: async (name: string): Promise<GroupRow> => {
       const { data, error } = await supabase.rpc('create_group', { p_name: name });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data as GroupRow;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memberships'] }),
@@ -146,7 +146,7 @@ export function useJoinGroup() {
       const { data, error } = await supabase.rpc('join_group', {
         p_invite_code: inviteCode,
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data as GroupRow;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memberships'] }),
@@ -158,7 +158,7 @@ export function useLeaveGroup() {
   return useMutation({
     mutationFn: async (groupId: string) => {
       const { error } = await supabase.rpc('leave_group', { p_group_id: groupId });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => queryClient.invalidateQueries(),
   });
@@ -171,7 +171,7 @@ export function useRegenerateInviteCode() {
       const { data, error } = await supabase.rpc('regenerate_invite_code', {
         p_group_id: groupId,
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data as string;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memberships'] }),
@@ -423,7 +423,9 @@ export function useSendReminder() {
         p_habit_id: input.habitId,
         ...(input.message ? { p_message: input.message } : {}),
       });
-      if (error) throw error;
+      // Supabase-Fehler sind keine Error-Instanzen – als echten Error mit
+      // der Server-Meldung weiterwerfen, damit die UI den Grund zeigt.
+      if (error) throw new Error(error.message);
       const notificationId = data as string;
 
       // Zustellung (Push/E-Mail) anstoßen – Fehler hier sind nicht kritisch,
