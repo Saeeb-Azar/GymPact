@@ -219,6 +219,27 @@ export function useMyHabitTargets() {
   });
 }
 
+/**
+ * Persönliche Zielwerte ALLER Mitglieder für die Gewohnheiten einer
+ * Challenge (Gruppenübersicht: "35 / 180 g"). RLS: lesbar für
+ * Gruppenmitglieder (Migration 0007).
+ */
+export function useChallengeHabitTargets(challenge: ChallengeWithHabits | null | undefined) {
+  const habitIds = (challenge?.habits ?? []).map((h) => h.id);
+  return useQuery({
+    queryKey: ['challenge-habit-targets', challenge?.id ?? 'none'],
+    enabled: habitIds.length > 0,
+    queryFn: async (): Promise<HabitTargetRow[]> => {
+      const { data, error } = await supabase
+        .from('habit_targets')
+        .select('*')
+        .in('habit_id', habitIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 export function useSetHabitTarget() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -236,6 +257,7 @@ export function useSetHabitTarget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-habit-targets', user?.id ?? 'anon'] });
+      queryClient.invalidateQueries({ queryKey: ['challenge-habit-targets'] });
     },
   });
 }

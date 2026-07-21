@@ -93,7 +93,8 @@ GymPact/
     │   ├── 0003_functions.sql  # RPCs (Gruppen, Reminder, Cooldowns)
     │   ├── 0004_realtime.sql   # Realtime-Publikationen
     │   ├── 0005_admin.sql      # App-weiter Admin-Zugang (app_admins, Policies)
-    │   └── 0006_habit_targets.sql # persönliche Zielwerte je Nutzer
+    │   ├── 0006_habit_targets.sql # persönliche Zielwerte je Nutzer
+    │   └── 0007_group_targets_email.sql # Ziele gruppenweit lesbar, E-Mail default an
     └── functions/
         │                       # (Functions sind eigenständig – ohne Shared-Imports)
         ├── send-push/          # stellt eine Notification per Push/E-Mail zu
@@ -237,9 +238,10 @@ Gruppenansicht zeigt live (Supabase Realtime), wie weit alle sind:
 
 - **Heute als Gruppe** – gemeinsamer Fortschrittsring (Durchschnitt) und
   wie viele Personen schon komplett sind.
-- **Wer ist wie weit?** – jede Person mit Avatar + Mini-Ring, offenen
-  Gewohnheiten als Chips und aktueller Serie, dezent nach Tagesfortschritt
-  sortiert (ohne Ranglisten-Nummern).
+- **Detail-Karten je Mitglied** – jede Person mit Avatar + Mini-Ring und
+  ALLEN Gewohnheiten im Detail: boolesche als Haken, numerische mit echtem
+  Wert gegen das persönliche Ziel (z. B. „Protein: 35 / 180 g“) samt
+  Fortschrittsbalken. So sieht die Gruppe, wer wo steht und was noch fehlt.
 - **Was fehlt heute noch?** – je Gewohnheit ein Balken „x/n erledigt“ plus
   die Avatare derjenigen, bei denen sie noch offen ist.
 - **Gesamt-Fortschritt** – Balkenvergleich der durchschnittlichen Erfüllung
@@ -286,11 +288,29 @@ on conflict (user_id) do nothing;
 
 Admin-Rechte entziehen: `delete from public.app_admins where user_id = '<uuid>';`
 
-## E-Mail-Fallback (optional)
+## E-Mail-Benachrichtigungen
 
-Über [Resend](https://resend.com): `supabase secrets set RESEND_API_KEY=... EMAIL_FROM="GymPact <noreply@deine-domain.de>"`.
-E-Mails gehen nur raus, wenn der Nutzer den Kanal aktiviert hat **und** kein
-Gerät per Push erreichbar war.
+E-Mails werden verschickt, sobald der Kanal aktiviert ist (Standard: **an**,
+seit Migration 0007) – unabhängig davon, ob Push funktioniert. Dafür muss
+ein Mail-Anbieter als Edge-Function-Secret hinterlegt sein:
+
+**Variante Brevo (empfohlen – kostenlos, keine eigene Domain nötig):**
+1. Konto auf [brevo.com](https://www.brevo.com) anlegen (Free: 300 Mails/Tag).
+2. Unter *Senders & IPs → Senders* die eigene Absender-Adresse verifizieren
+   (z. B. deine Gmail-Adresse – Bestätigungslink anklicken).
+3. Unter *SMTP & API → API Keys* einen Key erzeugen.
+4. Secrets setzen (Dashboard: *Edge Functions → Secrets*):
+   - `BREVO_API_KEY` = der API-Key
+   - `EMAIL_FROM` = `GymPact <deine-verifizierte-adresse@gmail.com>`
+
+**Variante Resend:** `RESEND_API_KEY` + `EMAIL_FROM` setzen. Achtung: Ohne
+verifizierte eigene Domain erlaubt Resend nur Mails an die eigene
+Account-Adresse – für Gruppen mit mehreren Empfängern also Brevo nehmen
+oder eine Domain verifizieren.
+
+Beide Edge Functions (`send-push`, `auto-reminders`) prüfen zuerst
+`BREVO_API_KEY`, dann `RESEND_API_KEY`. Ruhezeiten des Empfängers gelten
+auch für E-Mails.
 
 ## Deployment (Frontend)
 

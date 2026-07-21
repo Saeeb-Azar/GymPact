@@ -96,20 +96,54 @@ async function sendPushToUser(
   return delivered;
 }
 
+// E-Mail-Versand über Brevo (empfohlen, kostenlos ohne eigene Domain)
+// oder Resend – je nachdem, welches Secret gesetzt ist.
+// EMAIL_FROM im Format:  GymPact <deine-adresse@gmail.com>
+function parseFrom(): { name: string; email: string } {
+  const raw = Deno.env.get("EMAIL_FROM") ?? "GymPact <no-reply@example.com>";
+  const match = raw.match(/^(.*?)\s*<(.+)>$/);
+  if (match) return { name: match[1].trim() || "GymPact", email: match[2].trim() };
+  return { name: "GymPact", email: raw.trim() };
+}
+
 async function sendEmail(to: string, subject: string, text: string): Promise<boolean> {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) return false;
-  const from = Deno.env.get("EMAIL_FROM") ?? "GymPact <onboarding@resend.dev>";
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, text }),
-  });
-  if (!res.ok) {
-    console.error("E-Mail-Versand fehlgeschlagen:", await res.text());
-    return false;
+  const brevoKey = Deno.env.get("BREVO_API_KEY");
+  if (brevoKey) {
+    const from = parseFrom();
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": brevoKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender: from,
+        to: [{ email: to }],
+        subject,
+        textContent: text,
+      }),
+    });
+    if (!res.ok) {
+      console.error("Brevo-E-Mail fehlgeschlagen:", await res.text());
+      return false;
+    }
+    return true;
   }
-  return true;
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (resendKey) {
+    const from = Deno.env.get("EMAIL_FROM") ?? "GymPact <onboarding@resend.dev>";
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: [to], subject, text }),
+    });
+    if (!res.ok) {
+      console.error("Resend-E-Mail fehlgeschlagen:", await res.text());
+      return false;
+    }
+    return true;
+  }
+
+  console.warn("Kein BREVO_API_KEY/RESEND_API_KEY gesetzt – E-Mail übersprungen");
+  return false;
 }
 
 function localMinutes(timezone: string, date = new Date()): number {
@@ -191,8 +225,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // E-Mail wird unabhängig vom Push-Ergebnis verschickt, sobald der
+    // Kanal aktiviert ist (Standard: an) – Push gilt als Bonus.
     let emailed = false;
-    if (prefs?.email && pushed === 0 && !quiet && !notification.email_sent_at) {
+    if (prefs?.email && !quiet && !notification.email_sent_at) {
       const { data: userData } = await supabase.auth.admin.getUserById(
         notification.user_id,
       );

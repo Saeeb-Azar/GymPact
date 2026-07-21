@@ -3,7 +3,12 @@
 // ruhig und ohne aggressive Ranglisten.
 
 import { useMemo } from 'react';
-import type { ChallengeWithHabits, CheckinWithEntries, MemberWithProfile } from '@/hooks/queries';
+import {
+  useChallengeHabitTargets,
+  type ChallengeWithHabits,
+  type CheckinWithEntries,
+  type MemberWithProfile,
+} from '@/hooks/queries';
 import {
   computeDayCompletion,
   computeDayCompletions,
@@ -14,6 +19,7 @@ import {
   type EntryLite,
 } from '@/lib/stats';
 import type { DateString } from '@/lib/dates';
+import type { HabitRow } from '@/lib/database.types';
 import { Badge, Card } from '@/components/ui/basics';
 import { ProgressRing, MiniRing } from '@/components/ui/ProgressRing';
 import { Avatar } from '@/components/ui/Avatar';
@@ -42,6 +48,14 @@ export function GroupProgress({
   today,
   currentUserId,
 }: GroupProgressProps) {
+  // Persönliche Zielwerte aller Mitglieder ("35 / 180 g" statt nur ✓/✗)
+  const { data: allTargets = [] } = useChallengeHabitTargets(challenge);
+  const targetFor = (habit: HabitRow, userId: string): number | null => {
+    const personal = allTargets.find(
+      (t) => t.habit_id === habit.id && t.user_id === userId,
+    );
+    return personal?.target_value ?? habit.target_value;
+  };
   const perMember = useMemo<MemberProgress[]>(() => {
     const until = today < challenge.end_date ? today : challenge.end_date;
     return members.map((member) => {
@@ -119,22 +133,16 @@ export function GroupProgress({
         </div>
       </Card>
 
-      {/* Heutige Standings je Mitglied */}
-      <Card className="animate-fade-up">
-        <h2 className="text-base font-semibold">Wer ist wie weit?</h2>
-        <ul className="mt-3 space-y-4">
-          {todayStandings.map(({ member, today: t, streak }) => {
-            const isMe = member.user_id === currentUserId;
-            const missing = challenge.habits.filter((habit) => {
-              const checkin = checkins.find(
-                (c) => c.user_id === member.user_id && c.date === today,
-              );
-              return !(checkin?.habit_entries ?? []).some(
-                (e) => e.habit_id === habit.id && e.completed,
-              );
-            });
-            return (
-              <li key={member.user_id} className="flex items-start gap-3">
+      {/* Detail-Karten je Mitglied: alle Werte im Vergleich zum Ziel */}
+      <div className="space-y-3">
+        {todayStandings.map(({ member, today: t, streak }) => {
+          const isMe = member.user_id === currentUserId;
+          const checkin = checkins.find(
+            (c) => c.user_id === member.user_id && c.date === today,
+          );
+          return (
+            <Card key={member.user_id} className="animate-fade-up">
+              <div className="flex items-center gap-3">
                 <div className="relative shrink-0">
                   <Avatar
                     name={member.profiles.display_name}
@@ -146,56 +154,102 @@ export function GroupProgress({
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-medium">
-                      {member.profiles.display_name}
-                      {isMe && (
-                        <span className="text-surface-900/40 dark:text-surface-100/40">
-                          {' '}
-                          (du)
-                        </span>
-                      )}
-                    </p>
-                    <span className="flex shrink-0 items-center gap-2 text-xs">
-                      {streak > 0 && (
-                        <span className="inline-flex items-center gap-0.5 text-amber-500">
-                          <IconFlame size={13} />
-                          {streak}
-                        </span>
-                      )}
-                      <span className="font-semibold tabular-nums text-surface-900/60 dark:text-surface-100/60">
-                        {t.completed}/{t.total}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="mt-1.5">
-                    {t.isFull ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 dark:text-brand-300">
-                        <IconCheck size={13} /> Alles erledigt
-                      </span>
-                    ) : missing.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {missing.map((habit) => (
-                          <span
-                            key={habit.id}
-                            className="rounded-full bg-surface-100 px-2 py-0.5 text-[11px] text-surface-900/60 dark:bg-surface-800 dark:text-surface-100/60"
-                          >
-                            {habit.name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-surface-900/40 dark:text-surface-100/40">
-                        Noch kein Check-in
+                  <p className="truncate text-sm font-semibold">
+                    {member.profiles.display_name}
+                    {isMe && (
+                      <span className="font-normal text-surface-900/40 dark:text-surface-100/40">
+                        {' '}
+                        (du)
                       </span>
                     )}
-                  </div>
+                  </p>
+                  <p className="text-xs text-surface-900/50 dark:text-surface-100/50">
+                    {t.completed}/{t.total} erledigt
+                    {!checkin && ' · noch kein Check-in heute'}
+                  </p>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+                <span className="flex shrink-0 items-center gap-2">
+                  {streak > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-amber-500">
+                      <IconFlame size={14} />
+                      {streak}
+                    </span>
+                  )}
+                  {t.isFull && <Badge tone="brand">Komplett</Badge>}
+                </span>
+              </div>
+
+              {/* Alle Gewohnheiten mit echten Werten */}
+              <ul className="mt-3 space-y-2 border-t border-surface-100 pt-3 dark:border-surface-800">
+                {challenge.habits.map((habit) => {
+                  const entry = (checkin?.habit_entries ?? []).find(
+                    (e) => e.habit_id === habit.id,
+                  );
+                  const completed = entry?.completed ?? false;
+
+                  if (habit.type === 'boolean') {
+                    return (
+                      <li
+                        key={habit.id}
+                        className="flex items-center justify-between gap-3"
+                      >
+                        <span
+                          className={`min-w-0 truncate text-sm ${
+                            completed
+                              ? 'text-surface-900/50 line-through dark:text-surface-100/50'
+                              : ''
+                          }`}
+                        >
+                          {habit.name}
+                        </span>
+                        {completed ? (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">
+                            <IconCheck size={12} strokeWidth={3} />
+                          </span>
+                        ) : (
+                          <span className="h-5 w-5 shrink-0 rounded-full border-2 border-surface-200 dark:border-surface-800" />
+                        )}
+                      </li>
+                    );
+                  }
+
+                  const target = targetFor(habit, member.user_id);
+                  const value = entry?.value_numeric ?? 0;
+                  const ratio =
+                    target && target > 0 ? Math.min(1, value / target) : 0;
+                  return (
+                    <li key={habit.id}>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate text-sm">{habit.name}</span>
+                        <span
+                          className={`shrink-0 text-sm font-semibold tabular-nums ${
+                            completed
+                              ? 'text-brand-700 dark:text-brand-300'
+                              : 'text-surface-900/70 dark:text-surface-100/70'
+                          }`}
+                        >
+                          {value % 1 === 0 ? value : value.toFixed(1)}
+                          {' / '}
+                          {target ?? '–'}
+                          {habit.unit ? ` ${habit.unit}` : ''}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800">
+                        <div
+                          className={`h-full rounded-full transition-[width] duration-300 ${
+                            completed ? 'bg-brand-500' : 'bg-brand-300 dark:bg-brand-700'
+                          }`}
+                          style={{ width: `${ratio * 100}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Was fehlt heute noch – je Gewohnheit */}
       <Card className="animate-fade-up">
