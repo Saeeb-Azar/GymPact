@@ -461,6 +461,43 @@ export function useSendReminder() {
   });
 }
 
+/** Diagnose-Ergebnis der send-push Edge Function für den Test-Button. */
+export interface TestPushResult {
+  status?: string;
+  pushed?: number;
+  /** -1 = VAPID-Secrets fehlen; 0 = kein Gerät registriert */
+  subscriptions?: number;
+  pushErrors?: Array<{ status: number | null; message: string }>;
+  pushEnabled?: boolean;
+  emailed?: boolean;
+  quiet?: boolean;
+}
+
+/**
+ * Sendet eine Test-Benachrichtigung an sich selbst und stößt die
+ * Zustellung an. Liefert die Diagnose der Edge Function zurück, damit
+ * die Einstellungen konkret sagen können, woran es hakt.
+ */
+export function useSendTestPush() {
+  return useMutation({
+    mutationFn: async (): Promise<TestPushResult> => {
+      const { data, error } = await supabase.rpc('send_test_notification');
+      if (error) throw new Error(error.message);
+
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+        'send-push',
+        { body: { notification_id: data as string } },
+      );
+      if (fnError) {
+        throw new Error(
+          'send-push nicht erreichbar – ist die Edge Function deployt?',
+        );
+      }
+      return (fnData ?? {}) as TestPushResult;
+    },
+  });
+}
+
 // ---------------------------------------------------------------- Notifications
 export function useNotifications() {
   const { user } = useAuth();

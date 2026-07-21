@@ -284,6 +284,10 @@ export type Database = {
         Args: { p_ids?: string[] | null };
         Returns: undefined;
       };
+      send_test_notification: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

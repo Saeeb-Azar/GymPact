@@ -14,6 +14,7 @@ import {
   useMyHabitTargets,
   useNotificationPreferences,
   useProfile,
+  useSendTestPush,
   useSetHabitTarget,
   useUpdateNotificationPreferences,
   useUpdateProfile,
@@ -334,13 +335,54 @@ function AppearanceSection() {
 function NotificationSection({ userId }: { userId: string }) {
   const { data: prefs } = useNotificationPreferences();
   const updatePrefs = useUpdateNotificationPreferences();
+  const testPush = useSendTestPush();
   const { showToast } = useToast();
   const [pushActive, setPushActive] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     void hasActivePushSubscription().then(setPushActive);
   }, []);
+
+  // Test-Push mit konkreter Diagnose statt Rätselraten
+  const runPushTest = async () => {
+    setTestResult(null);
+    try {
+      const result = await testPush.mutateAsync();
+      if (result.quiet) {
+        setTestResult(
+          'Ruhezeit aktiv – gerade werden keine Benachrichtigungen zugestellt. Passe unten die Ruhezeiten an und teste erneut.',
+        );
+      } else if (result.pushEnabled === false) {
+        setTestResult('Der „Web-Push“-Schalter oben ist aus – erst einschalten.');
+      } else if (result.subscriptions === -1) {
+        setTestResult(
+          'Auf dem Server fehlen die VAPID-Secrets (Supabase → Edge Functions → Secrets).',
+        );
+      } else if (result.subscriptions === 0) {
+        setTestResult(
+          'Kein Gerät registriert. Tippe oben bei „Dieses Gerät“ auf „Aktivieren“ (iPhone: App muss vom Home-Bildschirm geöffnet sein).',
+        );
+      } else if ((result.pushed ?? 0) > 0) {
+        setTestResult(null);
+        showToast(`Test-Push an ${result.pushed} Gerät(e) gesendet 🎉`, 'success');
+      } else {
+        const firstError = result.pushErrors?.[0];
+        if (firstError?.status === 403 || firstError?.status === 401) {
+          setTestResult(
+            'Die VAPID-Schlüssel passen nicht zusammen: Der Public Key im Frontend (Hostinger) gehört nicht zum Private Key in Supabase. Beide neu setzen, Push am Gerät deaktivieren und wieder aktivieren.',
+          );
+        } else {
+          setTestResult(
+            `Zustellung fehlgeschlagen${firstError ? `: ${firstError.status ?? ''} ${firstError.message}` : ' (Details in den send-push-Logs)'}`,
+          );
+        }
+      }
+    } catch (err) {
+      setTestResult(err instanceof Error ? err.message : 'Test fehlgeschlagen');
+    }
+  };
 
   if (!prefs) return null;
 
@@ -428,6 +470,28 @@ function NotificationSection({ userId }: { userId: string }) {
           <p className="text-sm text-surface-900/60 dark:text-surface-100/60">
             Dieser Browser unterstützt kein Web-Push.
           </p>
+        )}
+
+        {/* Test-Push mit Diagnose */}
+        {pushSupported() && !iosNeedsInstallForPush() && (
+          <div className="mt-3 border-t border-surface-200 pt-3 dark:border-surface-800">
+            <Button
+              variant="secondary"
+              className="w-full py-2 text-sm"
+              loading={testPush.isPending}
+              onClick={() => void runPushTest()}
+            >
+              Test-Push an dieses Konto senden
+            </Button>
+            {testResult && (
+              <p
+                role="alert"
+                className="mt-2 text-xs leading-relaxed text-amber-700 dark:text-amber-400"
+              >
+                {testResult}
+              </p>
+            )}
+          </div>
         )}
       </div>
 

@@ -58,23 +58,37 @@ interface PushPayload {
   tag?: string;
 }
 
+interface PushResult {
+  delivered: number;
+  /** Anzahl registrierter Geräte des Empfängers (-1 = VAPID fehlt) */
+  subscriptions: number;
+  errors: Array<{ status: number | null; message: string }>;
+}
+
 async function sendPushToUser(
   supabase: SupabaseClient,
   userId: string,
   payload: PushPayload,
-): Promise<number> {
+): Promise<PushResult> {
   if (!ensureVapid()) {
     console.warn("VAPID-Schlüssel nicht konfiguriert – Push übersprungen");
-    return 0;
+    return {
+      delivered: 0,
+      subscriptions: -1,
+      errors: [{ status: null, message: "VAPID-Secrets fehlen auf dem Server" }],
+    };
   }
   const { data: subscriptions, error } = await supabase
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
     .eq("user_id", userId);
   if (error) throw error;
-  if (!subscriptions || subscriptions.length === 0) return 0;
+  if (!subscriptions || subscriptions.length === 0) {
+    return { delivered: 0, subscriptions: 0, errors: [] };
+  }
 
   let delivered = 0;
+  const errors: PushResult["errors"] = [];
   for (const sub of subscriptions) {
     try {
       await webpush.sendNotification(
@@ -84,16 +98,19 @@ async function sendPushToUser(
       );
       delivered++;
     } catch (err) {
-      const statusCode = (err as { statusCode?: number }).statusCode;
+      const statusCode = (err as { statusCode?: number }).statusCode ?? null;
+      const body = (err as { body?: string }).body ?? String(err);
       if (statusCode === 404 || statusCode === 410) {
         // Abo abgelaufen/widerrufen → aufräumen
         await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        errors.push({ status: statusCode, message: "Abo abgelaufen – entfernt" });
       } else {
-        console.error(`Push an ${sub.id} fehlgeschlagen:`, err);
+        console.error(`Push an ${sub.id} fehlgeschlagen (${statusCode}):`, body);
+        errors.push({ status: statusCode, message: String(body).slice(0, 200) });
       }
     }
   }
-  return delivered;
+  return { delivered, subscriptions: subscriptions.length, errors };
 }
 
 // E-Mail-Versand über Brevo (empfohlen, kostenlos ohne eigene Domain)
@@ -215,15 +232,16 @@ Deno.serve(async (req) => {
       ? isInQuietHours(timezone, prefs.quiet_hours_start, prefs.quiet_hours_end)
       : false;
 
-    let pushed = 0;
+    let pushResult: PushResult = { delivered: 0, subscriptions: 0, errors: [] };
     if (prefs?.push && !quiet) {
-      pushed = await sendPushToUser(supabase, notification.user_id, {
+      pushResult = await sendPushToUser(supabase, notification.user_id, {
         title: notification.title,
         body: notification.body,
         url: (notification.data as { url?: string })?.url ?? "/",
         tag: `gympact-${notification.type}-${notification.id}`,
       });
     }
+    const pushed = pushResult.delivered;
 
     // E-Mail wird unabhängig vom Push-Ergebnis verschickt, sobald der
     // Kanal aktiviert ist (Standard: an) – Push gilt als Bonus.
@@ -250,7 +268,15 @@ Deno.serve(async (req) => {
       })
       .eq("id", notification.id);
 
-    return jsonResponse({ status: "ok", pushed, emailed, quiet });
+    return jsonResponse({
+      status: "ok",
+      pushed,
+      subscriptions: pushResult.subscriptions,
+      pushErrors: pushResult.errors,
+      pushEnabled: prefs?.push ?? false,
+      emailed,
+      quiet,
+    });
   } catch (err) {
     console.error("send-push Fehler:", err);
     return jsonResponse({ error: String(err) }, 500);
