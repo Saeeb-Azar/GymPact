@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
 import { registerSchema, type RegisterValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
+import { friendlyNetworkMessage } from '@/lib/netError';
 import { Button, Field, Input } from '@/components/ui/basics';
 
 export function RegisterPage() {
@@ -38,7 +39,7 @@ export function RegisterPage() {
       setServerError(
         error.message.includes('already registered')
           ? 'Für diese E-Mail-Adresse existiert bereits ein Konto.'
-          : error.message,
+          : friendlyNetworkMessage(error.message),
       );
       return;
     }

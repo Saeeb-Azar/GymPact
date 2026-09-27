@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
 import { loginSchema, type LoginValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
+import { friendlyNetworkMessage } from '@/lib/netError';
 import { Button, Field, Input } from '@/components/ui/basics';
 
 export function LoginPage() {
@@ -33,7 +34,7 @@ export function LoginPage() {
       setServerError(
         error.message === 'Invalid login credentials'
           ? 'E-Mail oder Passwort ist falsch.'
-          : error.message,
+          : friendlyNetworkMessage(error.message),
       );
       return;
     }

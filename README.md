@@ -18,9 +18,12 @@ gemeinsam verwenden; jeder sieht ausschließlich seine eigenen Daten.
   Sätze mit Gewicht und Wiederholungen. „Vorwoche übernehmen“ kopiert den
   kompletten Plan inkl. Gewichten; jede Übung zeigt „Letztes Mal“, erkennt
   neue Bestleistungen (PR) und schätzt das 1RM.
-  **Körper 3D**: interaktives three.js-Modell mit Muskelgruppen – antippen,
-  die Figur dreht sich, die Gruppe wird rot markiert und daneben erscheinen
-  deine Übungen dafür. Grün eingefärbt = viel trainiert (4 Wochen).
+  **Körper 3D**: realistische anatomische Illustration (Vorder-/Rückseite,
+  Mann/Frau) mit anklickbaren Muskeln – wischen dreht die Figur in 3D,
+  ein Muskel antippen → Figur dreht sich zur richtigen Seite, zoomt auf den
+  Muskel, er pulsiert rot und daneben erscheinen deine Übungen dafür.
+  Grün eingefärbt = viel trainiert (4 Wochen). Illustrationen & Masken:
+  [js-rich-body-highlighter](https://github.com/crmapache/js-rich-body-highlighter) (MIT).
 - **Statistik** – Ernährung (3D-Balken Kalorien, Proteinverlauf,
   3D-Makro-Donut, Mahlzeiten, Tracking-Kalender), Training (Volumen je
   Woche, Kraftentwicklung je Übung, Bestleistungen, Muskelgruppen,
@@ -29,21 +32,48 @@ gemeinsam verwenden; jeder sieht ausschließlich seine eigenen Daten.
   (Mifflin-St Jeor), Hell/Dunkel.
 - **Admin** – Nutzerübersicht mit Aktivitäts-Zählwerten (keine Inhalte).
 
-## Update auf die Tracker-Version (Migration 0009)
+## Neues Supabase-Projekt aufsetzen (Schritt für Schritt)
 
-**Pflicht nach dem Deploy:** `supabase/migrations/0009_tracker.sql` einmal
-im Supabase-SQL-Editor ausführen (oder `supabase db push`). Sie legt die
-neuen Tabellen samt RLS an, die RPCs `copy_training_week` und
-`admin_user_overview` und schaltet den alten Erinnerungs-Cron ab. Die
-alten Challenge-Tabellen bleiben unverändert erhalten, werden aber nicht
-mehr genutzt. Ohne diese Migration zeigt die App einen Hinweis statt Daten.
+1. Auf [supabase.com](https://supabase.com) → **New project** (Region z. B.
+   Frankfurt), Datenbank-Passwort notieren.
+2. **SQL Editor → New query**: den kompletten Inhalt von
+   **`supabase/setup.sql`** einfügen → **Run**. Das legt in einem Rutsch
+   alle Tabellen, Sicherheitsregeln (RLS) und Funktionen an.
+3. **Project Settings → API**: *Project URL* und den *anon/public key*
+   kopieren.
+4. **Authentication → URL Configuration**: *Site URL* = deine Domain
+   (z. B. `https://gympact.deinedomain.de`), bei *Redirect URLs*
+   `https://gympact.deinedomain.de/**` ergänzen. Optional unter
+   **Authentication → Providers → Email** „Confirm email“ ausschalten, dann
+   kann man sich ohne Bestätigungsmail sofort anmelden.
+5. Lokal eine `.env` anlegen:
+   ```
+   VITE_SUPABASE_URL=https://<dein-ref>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<anon key>
+   ```
+   dann `npm install && npm run build` und den **Inhalt** von `dist/` nach
+   Hostinger (`public_html`) hochladen. (Baut Hostinger selbst aus Git, die
+   beiden Variablen dort als Umgebungsvariablen eintragen.)
+6. In der App registrieren und dich im SQL-Editor zum Admin machen:
+   ```sql
+   insert into public.app_admins (user_id)
+   select id from auth.users where email = 'deine-email@example.com'
+   on conflict (user_id) do nothing;
+   ```
+
+Zeigt die App beim Anmelden „Server nicht erreichbar“, ist das Projekt
+pausiert (Dashboard → *Restore project*) oder der Build enthält eine
+falsche `VITE_SUPABASE_URL`.
+
+**Bestehendes Projekt aktualisieren:** nur `supabase/migrations/0009_tracker.sql`
+ausführen (die alten Challenge-Tabellen bleiben unverändert).
 
 ---
 
 ## Architektur
 
 **„Thin Client, sicherer Kern in der Datenbank“.** Das React-Frontend
-(Vite, TypeScript, Tailwind, TanStack Query, framer-motion, three.js)
+(Vite, TypeScript, Tailwind, TanStack Query, framer-motion)
 spricht direkt mit Supabase. Row Level Security auf jeder Tabelle ist die
 einzige Wahrheit über Zugriffsrechte; jede Zeile gehört genau einem Nutzer
 (`user_id = auth.uid()`). Ausnahme: die Lebensmittel-Bibliothek `foods`
@@ -59,14 +89,15 @@ nur, wer den Eintrag angelegt hat.
 src/
 ├── pages/                 # Home, Nutrition, Training, Workout, Stats, Settings, Admin, auth/
 ├── components/
-│   ├── body/              # 3D-Körper: BodyScene (three.js, lazy geladen), BodyView
+│   ├── body/              # Körper: RealisticBody (Illustration + Muskelmasken, 3D-Drehung), BodyView
 │   ├── charts/            # Ring, MacroBar, Bars3D (CSS-3D), LineChart, Donut3D, Heatmap
 │   ├── nutrition/         # AddFoodSheet, AmountPicker, DaySummary, Water/WeightCard
 │   ├── training/          # ExerciseCard, AddExerciseSheet, AddWorkoutSheet
 │   └── ui/                # basics, motion (Sheet, Segmented, AnimatedNumber, Tilt, Konfetti)
 ├── hooks/                 # nutrition.ts, training.ts, queries.ts (Profil/Admin)
 └── lib/                   # nutrition.ts, training.ts, muscles.ts, openFoodFacts.ts, dates.ts (+ Tests)
-supabase/migrations/0009_tracker.sql   # Tracker-Schema
+supabase/setup.sql                     # Komplett-Setup für ein neues Projekt
+supabase/migrations/0009_tracker.sql   # Tracker-Schema (Update bestehender Projekte)
 ```
 
 ## Datenmodell (Tracker)

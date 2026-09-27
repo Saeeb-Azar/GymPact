@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 import { forgotPasswordSchema, type ForgotPasswordValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
+import { friendlyNetworkMessage } from '@/lib/netError';
 import { Button, Field, Input } from '@/components/ui/basics';
 
 export function ForgotPasswordPage() {
@@ -23,7 +24,7 @@ export function ForgotPasswordPage() {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) {
-      setServerError(error.message);
+      setServerError(friendlyNetworkMessage(error.message));
       return;
     }
     setSent(true);

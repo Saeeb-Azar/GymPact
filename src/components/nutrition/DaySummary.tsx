@@ -23,11 +23,11 @@ export function DaySummary({ total, goals }: { total: Macros; goals: Goals }) {
           <span className="text-[11px] muted">{over ? 'kcal drüber' : 'kcal übrig'}</span>
         </Ring>
         <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <span className="block text-[11px] muted">Gegessen / Ziel</span>
-            <span className="block whitespace-nowrap text-sm font-semibold num">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[11px] muted">Gegessen</span>
+            <span className="text-sm font-semibold num">
               {total.kcal.toLocaleString('de-DE')}
-              <span className="font-normal muted"> / {goals.calories.toLocaleString('de-DE')} kcal</span>
+              <span className="text-xs font-normal muted"> / {goals.calories.toLocaleString('de-DE')}</span>
             </span>
           </div>
           <MacroBar label="Protein" value={total.protein} goal={goals.protein_g} color="#8b5cf6" compact />

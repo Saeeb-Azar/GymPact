@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
 import { updatePasswordSchema, type UpdatePasswordValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
+import { friendlyNetworkMessage } from '@/lib/netError';
 import { Button, Field, Input } from '@/components/ui/basics';
 
 /**
@@ -28,7 +29,7 @@ export function ResetPasswordPage() {
     setServerError(null);
     const { error } = await supabase.auth.updateUser({ password: values.password });
     if (error) {
-      setServerError(error.message);
+      setServerError(friendlyNetworkMessage(error.message));
       return;
     }
     navigate('/', { replace: true });

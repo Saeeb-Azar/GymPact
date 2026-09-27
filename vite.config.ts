@@ -10,10 +10,13 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Die Körper-Illustrationen werden per new URL(..., import.meta.url) referenziert –
+  // Vorbündeln würde die relativen Pfade im Dev-Server brechen.
+  optimizeDeps: {
+    exclude: ['js-rich-body-highlighter'],
+  },
   build: {
     sourcemap: true,
-    // Das 3D-Körpermodell (three.js) wird separat und erst bei Bedarf geladen.
-    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {

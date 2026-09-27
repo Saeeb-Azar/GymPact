@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
 import type { AdminUserOverviewRow, ProfileRow } from '@/lib/database.types';
+import { friendlyNetworkMessage } from '@/lib/netError';
 
 export const queryKeys = {
   profile: (userId: string) => ['profile', userId] as const,
@@ -82,7 +83,7 @@ export function errorMessage(err: unknown): string {
     if (/relation .* does not exist|Could not find the table|schema cache/i.test(msg)) {
       return 'Datenbank noch nicht aktualisiert – bitte Migration 0009 in Supabase ausführen.';
     }
-    return msg;
+    return friendlyNetworkMessage(msg);
   }
   return 'Unbekannter Fehler';
 }

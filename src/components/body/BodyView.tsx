@@ -1,5 +1,6 @@
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { BodyView as Side, Gender } from 'js-rich-body-highlighter';
 import { useNavigate } from 'react-router-dom';
 import type { MuscleGroup } from '@/lib/database.types';
 import { addDays, formatDateShort, startOfWeek, type DateString } from '@/lib/dates';
@@ -7,8 +8,21 @@ import { MUSCLES, MUSCLE_BY_ID, muscleOf } from '@/lib/muscles';
 import { bestSet, estimateOneRepMax, exerciseKey, formatKg, summarizeSets } from '@/lib/training';
 import { useTrainingHistory } from '@/hooks/training';
 import { IconChevronRight, IconX } from '../icons';
+import { Segmented } from '../ui/motion';
+import { RealisticBody, groupsInView } from './RealisticBody';
 
-const BodyModel = lazy(() => import('./BodyModel'));
+const GENDER_KEY = 'gympact-body-gender';
+
+function useIsDark() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const html = document.documentElement;
+    const mo = new MutationObserver(() => setDark(html.classList.contains('dark')));
+    mo.observe(html, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
+  return dark;
+}
 
 interface ExerciseSummary {
   key: string;
@@ -29,6 +43,29 @@ export function BodyView({ today }: { today: DateString }) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<MuscleGroup | null>(null);
   const [hovered, setHovered] = useState<MuscleGroup | null>(null);
+  const [side, setSide] = useState<Side>('front');
+  const [gender, setGenderState] = useState<Gender>(() => {
+    try {
+      return localStorage.getItem(GENDER_KEY) === 'female' ? 'female' : 'male';
+    } catch {
+      return 'male';
+    }
+  });
+  const setGender = (g: Gender) => {
+    setGenderState(g);
+    try {
+      localStorage.setItem(GENDER_KEY, g);
+    } catch {
+      /* egal */
+    }
+  };
+  const dark = useIsDark();
+
+  const select = (m: MuscleGroup | null) => {
+    setSelected(m);
+    if (m && !groupsInView(gender, side).has(m)) setSide(side === 'front' ? 'back' : 'front');
+    if (m) window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const from = addDays(startOfWeek(today), -7 * 25);
   const { data: history = [], isLoading } = useTrainingHistory(from);
 
@@ -91,32 +128,60 @@ export function BodyView({ today }: { today: DateString }) {
 
   return (
     <LayoutGroup>
-      <div className={`relative ${selected ? 'flex items-start gap-3' : ''}`}>
+      <div className={selected ? 'grid grid-cols-[minmax(0,42%)_minmax(0,1fr)] items-start gap-3' : 'flex flex-col items-center'}>
+        {!selected && (
+          <div className="mb-3 w-full">
+            <div className="flex gap-2">
+              <Segmented
+                size="sm"
+                className="flex-[2]"
+                value={side}
+                onChange={setSide}
+                options={[
+                  { value: 'front', label: 'Vorne' },
+                  { value: 'back', label: 'Hinten' },
+                ]}
+              />
+              <Segmented
+                size="sm"
+                className="flex-1"
+                value={gender}
+                onChange={setGender}
+                options={[
+                  { value: 'male', label: '♂' },
+                  { value: 'female', label: '♀' },
+                ]}
+              />
+            </div>
+          </div>
+        )}
         <motion.div
           layout
-          transition={{ type: 'spring', stiffness: 220, damping: 28 }}
-          className={`card relative shrink-0 overflow-hidden ${selected ? 'h-[300px] w-[40%]' : 'h-[460px] w-full'}`}
+          transition={{ type: 'spring', stiffness: 200, damping: 28 }}
+          className="card relative w-full overflow-hidden"
+          style={selected ? undefined : { maxWidth: 'min(100%, max(220px, calc((100dvh - 430px) * 0.6665)), 360px)' }}
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_40%,rgba(15,203,132,0.14),transparent_70%)]"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_42%,rgba(15,203,132,0.16),transparent_70%)]"
           />
-          <Suspense fallback={<div className="skeleton m-4 h-[calc(100%-2rem)]" />}>
-            <BodyModel heat={heat} selected={selected} onSelect={setSelected} onHover={setHovered} />
-          </Suspense>
-          {!selected && (
-            <div className="pointer-events-none absolute inset-x-0 top-3 text-center">
-              <p className="font-display text-base font-bold">
-                {hovered ? MUSCLE_BY_ID[hovered].label : 'Tippe auf einen Muskel'}
-              </p>
-              <p className="text-xs muted">Ziehen zum Drehen · Grün = viel trainiert (4 Wochen)</p>
-            </div>
-          )}
+          <div className="relative w-full" style={{ aspectRatio: '361.16 / 541.87' }}>
+            <RealisticBody
+              gender={gender}
+              view={side}
+              onViewChange={setSide}
+              heat={heat}
+              selected={selected}
+              onSelect={select}
+              onHover={setHovered}
+              dark={dark}
+            />
+          </div>
           {selected && (
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur"
+              className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur"
               aria-label="Auswahl aufheben"
             >
               <IconX size={16} />
@@ -124,19 +189,28 @@ export function BodyView({ today }: { today: DateString }) {
           )}
         </motion.div>
 
+        {!selected && (
+          <div className="mt-3 w-full space-y-1 text-center">
+            <p className="min-h-[24px] font-display text-base font-bold">
+              {hovered ? MUSCLE_BY_ID[hovered].label : 'Tippe auf einen Muskel'}
+            </p>
+            <p className="text-xs muted">Wischen zum Drehen · Grün = viel trainiert (4 Wochen)</p>
+          </div>
+        )}
+
         <AnimatePresence mode="popLayout">
           {info && (
             <motion.div
               key={info.id}
               layout
-              initial={{ opacity: 0, x: 40 }}
+              initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 40 }}
+              exit={{ opacity: 0, x: 30 }}
               transition={{ type: 'spring', stiffness: 260, damping: 28, delay: 0.1 }}
-              className="min-w-0 flex-1"
+              className="min-w-0"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-500">Muskelgruppe</p>
-              <h2 className="font-display text-2xl font-bold leading-tight">{info.label}</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-500">Muskelgruppe</p>
+              <h2 className="break-words font-display text-2xl font-bold leading-tight">{info.label}</h2>
               <p className="mt-0.5 text-xs muted">
                 <span className="font-semibold text-surface-900 num dark:text-surface-100">
                   {setsByMuscle.get(info.id) ?? 0}
@@ -161,15 +235,14 @@ export function BodyView({ today }: { today: DateString }) {
                       transition={{ delay: 0.15 + i * 0.05 }}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => navigate(`/training/workout/${e.lastWorkoutId}`)}
-                      className="card flex w-full items-center gap-2 p-3 text-left"
+                      className="card flex w-full min-w-0 items-center gap-1.5 p-2.5 text-left"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold">{e.name}</span>
-                        <span className="block truncate text-[11px] muted">
-                          {e.lastSummary} · {formatDateShort(e.lastWeek)}
-                        </span>
+                        <span className="block truncate text-[11px] muted">{e.lastSummary}</span>
+                        <span className="block truncate text-[11px] muted">{formatDateShort(e.lastWeek)}</span>
                         {e.best1RM > 0 && (
-                          <span className="mt-0.5 block text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                          <span className="mt-0.5 block truncate text-[11px] font-semibold text-brand-600 dark:text-brand-400">
                             1RM ≈ {formatKg(e.best1RM)} kg · {e.sessions}×
                           </span>
                         )}
@@ -212,13 +285,13 @@ export function BodyView({ today }: { today: DateString }) {
             <button
               key={m.id}
               type="button"
-              onClick={() => setSelected(active ? null : m.id)}
-              className={`rounded-2xl px-2 py-2.5 text-left transition-colors ${
+              onClick={() => select(active ? null : m.id)}
+              className={`min-w-0 rounded-2xl px-2 py-2.5 text-left transition-colors ${
                 active ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'card'
               }`}
             >
               <span className="block truncate text-xs font-semibold">{m.label}</span>
-              <span className={`block text-[11px] num ${active ? 'text-white/80' : 'muted'}`}>{n} Sätze</span>
+              <span className={`block truncate text-[11px] num ${active ? 'text-white/80' : 'muted'}`}>{n} Sätze</span>
               {!active && (
                 <span className="mt-1 block h-1 overflow-hidden rounded-full bg-surface-200 dark:bg-white/[0.07]">
                   <span
