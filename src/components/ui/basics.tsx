@@ -201,16 +201,20 @@ export function EmptyState({
   title,
   description,
   action,
-  emoji,
+  icon,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
-  emoji?: string;
+  icon?: ReactNode;
 }) {
   return (
     <div className="card flex flex-col items-center gap-3 px-6 py-10 text-center">
-      {emoji && <div className="animate-float text-5xl">{emoji}</div>}
+      {icon && (
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/12 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+          {icon}
+        </div>
+      )}
       <h2 className="font-display text-lg font-semibold">{title}</h2>
       {description && (
         <p className="max-w-sm text-sm text-surface-900/60 dark:text-surface-100/60">

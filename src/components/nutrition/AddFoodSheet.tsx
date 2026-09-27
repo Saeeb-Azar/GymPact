@@ -15,7 +15,8 @@ import { errorMessage } from '@/hooks/queries';
 import { Button, Field, Input, Spinner } from '../ui/basics';
 import { Segmented, Sheet } from '../ui/motion';
 import { useToast } from '../ui/toast';
-import { IconPlus, IconSearch, IconSparkles } from '../icons';
+import { IconFood, IconPlus, IconSearch, IconSparkles } from '../icons';
+import { MealIcon } from './MealIcon';
 import { AmountPicker, type Per100 } from './AmountPicker';
 
 type View =
@@ -79,7 +80,9 @@ export function AddFoodSheet({
                 : 'bg-surface-100 dark:bg-white/[0.06]'
             }`}
           >
-            {m.emoji} {m.label}
+            <span className="inline-flex items-center gap-1.5">
+              <MealIcon meal={m.id} size={16} /> {m.label}
+            </span>
           </button>
         ))}
       </div>
@@ -383,8 +386,8 @@ function FoodRowButton({
       {image ? (
         <img src={image} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain" loading="lazy" />
       ) : (
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-100 text-lg dark:bg-white/[0.06]">
-          🍽️
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-100 muted dark:bg-white/[0.06]">
+          <IconFood size={18} />
         </span>
       )}
       <span className="min-w-0 flex-1">

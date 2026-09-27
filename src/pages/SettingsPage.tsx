@@ -23,7 +23,15 @@ import { Segmented, Sheet } from '@/components/ui/motion';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui/toast';
 import { OnboardingGuide } from '@/components/OnboardingGuide';
-import { IconChevronRight, IconLogout, IconShield, IconSparkles } from '@/components/icons';
+import {
+  IconChevronRight,
+  IconLogout,
+  IconMonitor,
+  IconMoon,
+  IconShield,
+  IconSparkles,
+  IconSun,
+} from '@/components/icons';
 
 export function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -444,9 +452,9 @@ function AppearanceSection() {
         value={theme}
         onChange={setTheme}
         options={[
-          { value: 'dark', label: '🌙 Dunkel' },
-          { value: 'light', label: '☀️ Hell' },
-          { value: 'system', label: 'System' },
+          { value: 'dark', label: <span className="inline-flex items-center gap-1.5"><IconMoon size={16} /> Dunkel</span> },
+          { value: 'light', label: <span className="inline-flex items-center gap-1.5"><IconSun size={16} /> Hell</span> },
+          { value: 'system', label: <span className="inline-flex items-center gap-1.5"><IconMonitor size={16} /> System</span> },
         ]}
       />
     </Card>

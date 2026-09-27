@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { IconDumbbell } from '@/components/icons';
 
 /** Gemeinsame Hülle für alle Auth-Seiten. */
 export function AuthLayout({
@@ -16,8 +17,8 @@ export function AuthLayout({
       style={{ paddingTop: 'calc(var(--safe-top) + 2rem)' }}
     >
       <div className="mb-8 flex flex-col items-center text-center">
-        <span className="mb-3 flex h-16 w-16 animate-float items-center justify-center rounded-3xl bg-gradient-to-br from-brand-300 to-brand-600 text-3xl shadow-glow">
-          🏋️
+        <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-300 to-brand-600 text-surface-950 shadow-glow">
+          <IconDumbbell size={32} strokeWidth={2.2} />
         </span>
         <span className="font-display text-4xl font-bold tracking-tight">
           Gym<span className="text-gradient">Pact</span>

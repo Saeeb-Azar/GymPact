@@ -93,7 +93,7 @@ export function ExerciseCard({
           <span className="text-center">Satz</span>
           <span className="text-center">kg</span>
           <span className="text-center">Wdh.</span>
-          <span className="text-center">✓</span>
+          <span className="flex justify-center"><IconCheck size={12} strokeWidth={2.6} /></span>
           <span />
         </div>
         <AnimatePresence initial={false}>

@@ -297,3 +297,74 @@ export function IconMore(props: IconProps) {
     </svg>
   );
 }
+
+export function IconSunrise(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 18h16M6.5 18a5.5 5.5 0 0 1 11 0" />
+      <path d="M12 4v4M5 9.5l1.6 1.6M19 9.5l-1.6 1.6M2.5 14h2M19.5 14h2" />
+    </svg>
+  );
+}
+
+export function IconSun(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+    </svg>
+  );
+}
+
+export function IconMoon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+    </svg>
+  );
+}
+
+export function IconApple(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 7.5c-1.5-1-4.5-1.3-6 .8-1.7 2.4-1 6.6 1 9.4 1.2 1.7 2.6 2.6 3.7 2 .8-.4 1.8-.4 2.6 0 1.1.6 2.5-.3 3.7-2 2-2.8 2.7-7 1-9.4-1.5-2.1-4.5-1.8-6-.8Z" />
+      <path d="M12 7.5c0-2 .8-3.5 2.5-4.3" />
+    </svg>
+  );
+}
+
+export function IconMonitor(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4.5" width="18" height="12" rx="2" />
+      <path d="M8.5 20h7M12 16.5V20" />
+    </svg>
+  );
+}
+
+export function IconClipboard(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="5" y="4.5" width="14" height="16.5" rx="2.5" />
+      <path d="M9 4.5V4a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 4v.5M9 10.5h6M9 14h6M9 17.5h3.5" />
+    </svg>
+  );
+}
+
+export function IconBody(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="4.5" r="2" />
+      <path d="M6 8.5c2 .8 4 1.1 6 1.1s4-.3 6-1.1M12 9.6V14M12 14l-2.5 7M12 14l2.5 7" />
+    </svg>
+  );
+}
+
+export function IconInfo(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5M12 7.5v.5" />
+    </svg>
+  );
+}

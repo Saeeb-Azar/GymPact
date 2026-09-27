@@ -19,6 +19,7 @@ import { WaterCard } from '@/components/nutrition/WaterCard';
 import { WeightCard } from '@/components/nutrition/WeightCard';
 import { AddFoodSheet } from '@/components/nutrition/AddFoodSheet';
 import { AmountPicker } from '@/components/nutrition/AmountPicker';
+import { MealIcon } from '@/components/nutrition/MealIcon';
 import { Button, PageTitle } from '@/components/ui/basics';
 import { Sheet, listItem } from '@/components/ui/motion';
 import { useToast } from '@/components/ui/toast';
@@ -72,8 +73,8 @@ export function NutritionPage() {
               transition={{ delay: 0.05 * idx, type: 'spring', stiffness: 260, damping: 26 }}
             >
               <div className="flex items-center gap-3 p-4 pb-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-100 text-2xl dark:bg-white/[0.06]">
-                  {meal.emoji}
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface-100 text-brand-600 dark:bg-white/[0.06] dark:text-brand-400">
+                  <MealIcon meal={meal.id} size={22} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <h2 className="font-display text-lg font-bold leading-tight">{meal.label}</h2>
@@ -190,7 +191,9 @@ function EditEntrySheet({ entry, onClose }: { entry: FoodEntryRow | null; onClos
                     : 'bg-surface-100 dark:bg-white/[0.06]'
                 }`}
               >
-                {m.emoji} {m.label}
+                <span className="inline-flex items-center gap-1.5">
+                  <MealIcon meal={m.id} size={16} /> {m.label}
+                </span>
               </button>
             ))}
           </div>

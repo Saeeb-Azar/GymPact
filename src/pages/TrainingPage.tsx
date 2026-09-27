@@ -22,8 +22,11 @@ import { Button, EmptyState, Field, Input, PageTitle, Textarea } from '@/compone
 import { AnimatedNumber, Segmented, Sheet } from '@/components/ui/motion';
 import { useToast } from '@/components/ui/toast';
 import {
+  IconBody,
+  IconCalendar,
   IconCheck,
   IconChevronLeft,
+  IconClipboard,
   IconChevronRight,
   IconCopy,
   IconMore,
@@ -99,8 +102,8 @@ export function TrainingPage() {
         value={view}
         onChange={setView}
         options={[
-          { value: 'plan', label: '📋 Wochenplan' },
-          { value: 'body', label: '🧍 Körper 3D' },
+          { value: 'plan', label: <span className="inline-flex items-center gap-1.5"><IconClipboard size={16} /> Wochenplan</span> },
+          { value: 'body', label: <span className="inline-flex items-center gap-1.5"><IconBody size={16} /> Körper</span> },
         ]}
       />
 
@@ -158,7 +161,7 @@ export function TrainingPage() {
             </div>
           ) : !week ? (
             <EmptyState
-              emoji="🗓️"
+              icon={<IconCalendar size={28} />}
               title="Diese Woche ist noch leer"
               description={
                 prev
@@ -174,7 +177,7 @@ export function TrainingPage() {
                         copyWeek.mutate(
                           { sourceWeekId: prev.id, targetStart: weekStart },
                           {
-                            onSuccess: () => showToast(`KW ${isoWeek(prev.week_start)} übernommen 💪`, 'success'),
+                            onSuccess: () => showToast(`KW ${isoWeek(prev.week_start)} übernommen`, 'success'),
                             onError: (err) => showToast(errorMessage(err), 'error'),
                           },
                         )

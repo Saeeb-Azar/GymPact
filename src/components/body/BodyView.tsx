@@ -148,8 +148,8 @@ export function BodyView({ today }: { today: DateString }) {
                 value={gender}
                 onChange={setGender}
                 options={[
-                  { value: 'male', label: '♂' },
-                  { value: 'female', label: '♀' },
+                  { value: 'male', label: 'Mann' },
+                  { value: 'female', label: 'Frau' },
                 ]}
               />
             </div>

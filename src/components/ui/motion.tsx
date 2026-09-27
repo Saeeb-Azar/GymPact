@@ -9,7 +9,7 @@ import {
   useDragControls,
   useTransform,
 } from 'framer-motion';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 // ---------------------------------------------------------------- Zahl
@@ -279,55 +279,3 @@ export const staggerChild = {
   hidden: { opacity: 0, y: 14 },
   show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 28 } },
 } as const;
-
-/** Konfetti-Burst für Erfolgsmomente (Workout erledigt, Ziel erreicht). */
-export function useConfetti() {
-  const [bursts, setBursts] = useState<number[]>([]);
-  const fire = () => {
-    const id = Date.now();
-    setBursts((b) => [...b, id]);
-    window.setTimeout(() => setBursts((b) => b.filter((x) => x !== id)), 1600);
-  };
-  const node = createPortal(
-    <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden">
-      {bursts.map((id) => (
-        <ConfettiBurst key={id} />
-      ))}
-    </div>,
-    document.body,
-  );
-  return { fire, node };
-}
-
-const CONFETTI_COLORS = ['#2ee39d', '#8b5cf6', '#f59e0b', '#ec4899', '#38bdf8', '#ffffff'];
-
-function ConfettiBurst() {
-  const pieces = useRef(
-    Array.from({ length: 36 }, (_, i) => ({
-      angle: (i / 36) * Math.PI * 2 + Math.random() * 0.3,
-      dist: 120 + Math.random() * 160,
-      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      rot: Math.random() * 720 - 360,
-      size: 6 + Math.random() * 6,
-    })),
-  ).current;
-  return (
-    <div className="absolute left-1/2 top-1/2">
-      {pieces.map((p, i) => (
-        <motion.span
-          key={i}
-          className="absolute rounded-sm"
-          style={{ width: p.size, height: p.size * 0.5, background: p.color }}
-          initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
-          animate={{
-            x: Math.cos(p.angle) * p.dist,
-            y: Math.sin(p.angle) * p.dist + 180,
-            opacity: 0,
-            rotate: p.rot,
-          }}
-          transition={{ duration: 1.4, ease: [0.2, 0.7, 0.4, 1] }}
-        />
-      ))}
-    </div>
-  );
-}

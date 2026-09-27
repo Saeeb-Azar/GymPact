@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthProvider';
 import { Button } from './ui/basics';
+import { IconChart, IconDumbbell, IconFood, IconSparkles } from './icons';
 
 const STORAGE_PREFIX = 'gympact-onboarding-v2-';
 
@@ -26,27 +27,27 @@ function markSeen(userId: string) {
 
 const STEPS = [
   {
-    emoji: '👋',
+    icon: IconSparkles,
     title: 'Willkommen beim neuen GymPact',
     text: 'Keine Challenges mehr – hier geht es nur um deinen Fortschritt. Ernährung, Training und Statistiken an einem Ort.',
     gradient: 'from-brand-400/40 to-violet-500/30',
   },
   {
-    emoji: '🥗',
+    icon: IconFood,
     title: 'Ernährung tracken',
     text: 'Trag dein Essen pro Mahlzeit ein – aus deiner Bibliothek, der Open-Food-Facts-Datenbank oder als Schnell-Eintrag. Kalorien, Protein, Kohlenhydrate, Fett und Wasser im Blick.',
     gradient: 'from-amber-400/40 to-pink-500/30',
   },
   {
-    emoji: '🏋️',
+    icon: IconDumbbell,
     title: 'Trainingsplan in Wochen',
     text: 'Leg jede Woche deine Einheiten an, schreib Übungen mit Gewicht und Wiederholungen auf – und übernimm mit einem Tipp die Vorwoche, um dich zu steigern.',
     gradient: 'from-violet-500/40 to-sky-400/30',
   },
   {
-    emoji: '📈',
+    icon: IconChart,
     title: 'Statistiken, die motivieren',
-    text: 'Kalorienverlauf, Makroverteilung, Körpergewicht, Trainingsvolumen und Bestleistungen je Übung – in 3D-Diagrammen, die du drehen kannst.',
+    text: 'Kalorienverlauf, Makroverteilung, Körpergewicht, Trainingsvolumen und Bestleistungen je Übung – übersichtlich aufbereitet – dazu eine Muskelkarte deines Körpers.',
     gradient: 'from-sky-400/40 to-brand-400/30',
   },
 ];
@@ -86,15 +87,13 @@ export function OnboardingGuide({ onClose }: { onClose: () => void }) {
             >
               <div style={{ perspective: 600 }}>
                 <motion.div
-                  className={`flex h-44 w-44 items-center justify-center rounded-[2.5rem] bg-gradient-to-br ${s.gradient} shadow-2xl backdrop-blur`}
-                  initial={{ rotateY: -35, rotateX: 15 }}
-                  animate={{ rotateY: [-35, 12, -8], rotateX: [15, -6, 8] }}
-                  transition={{ duration: 1.6, ease: 'easeOut' }}
+                  className={`flex h-44 w-44 items-center justify-center rounded-[2.5rem] bg-gradient-to-br ${s.gradient} text-surface-900 shadow-2xl backdrop-blur dark:text-white`}
+                  initial={{ rotateY: -20, rotateX: 10, opacity: 0 }}
+                  animate={{ rotateY: 0, rotateX: 0, opacity: 1 }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                   style={{ transformStyle: 'preserve-3d' }}
                 >
-                  <span className="text-7xl" style={{ transform: 'translateZ(40px)' }}>
-                    {s.emoji}
-                  </span>
+                  <s.icon size={72} strokeWidth={1.4} style={{ transform: 'translateZ(40px)' }} />
                 </motion.div>
               </div>
               <h1 className="mt-10 font-display text-2xl font-bold">{s.title}</h1>

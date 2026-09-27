@@ -13,11 +13,11 @@ export interface Macros {
 
 export const EMPTY_MACROS: Macros = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
 
-export const MEALS: { id: MealType; label: string; emoji: string; hint: string }[] = [
-  { id: 'breakfast', label: 'Frühstück', emoji: '🥣', hint: 'Guter Start in den Tag' },
-  { id: 'lunch', label: 'Mittagessen', emoji: '🍛', hint: 'Energie für den Nachmittag' },
-  { id: 'dinner', label: 'Abendessen', emoji: '🥩', hint: 'Regeneration über Nacht' },
-  { id: 'snack', label: 'Snacks', emoji: '🍌', hint: 'Shakes, Riegel, Obst …' },
+export const MEALS: { id: MealType; label: string; hint: string }[] = [
+  { id: 'breakfast', label: 'Frühstück', hint: 'Guter Start in den Tag' },
+  { id: 'lunch', label: 'Mittagessen', hint: 'Energie für den Nachmittag' },
+  { id: 'dinner', label: 'Abendessen', hint: 'Regeneration über Nacht' },
+  { id: 'snack', label: 'Snacks', hint: 'Shakes, Riegel, Obst …' },
 ];
 
 export const MEAL_LABEL: Record<MealType, string> = Object.fromEntries(

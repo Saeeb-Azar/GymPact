@@ -16,7 +16,7 @@ import { useTrainingWeek } from '@/hooks/training';
 import { DaySummary } from '@/components/nutrition/DaySummary';
 import { WaterCard } from '@/components/nutrition/WaterCard';
 import { Stagger, staggerChild } from '@/components/ui/motion';
-import { IconCheck, IconChevronRight, IconDumbbell, IconFood, IconSparkles } from '@/components/icons';
+import { IconBody, IconCheck, IconChevronRight, IconDumbbell, IconFood } from '@/components/icons';
 
 function greeting(hour: number) {
   if (hour < 5) return 'Noch wach';
@@ -71,8 +71,7 @@ export function HomePage() {
             <>
               , <span className="text-gradient">{name}</span>
             </>
-          )}{' '}
-          👋
+          )}
         </h1>
       </motion.div>
 
@@ -92,8 +91,8 @@ export function HomePage() {
         />
         <QuickAction
           to="/training?view=body"
-          icon={<IconSparkles size={22} />}
-          title="Körper 3D"
+          icon={<IconBody size={22} />}
+          title="Muskelkarte"
           sub="Muskeln & Übungen"
           gradient="from-violet-500/25 to-sky-400/20"
         />
@@ -115,7 +114,7 @@ export function HomePage() {
                 KW {isoWeek(today)} · {doneCount}/{workouts.length} erledigt
               </p>
               <p className="truncate font-display text-xl font-bold">
-                {todays ? todays.name : workouts.length ? 'Woche geschafft! 🎉' : 'Plan für diese Woche anlegen'}
+                {todays ? todays.name : workouts.length ? 'Alle Einheiten erledigt' : 'Plan für diese Woche anlegen'}
               </p>
               <p className="truncate text-sm muted">
                 {todays

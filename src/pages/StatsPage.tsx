@@ -31,7 +31,17 @@ import { Donut3D } from '@/components/charts/Donut3D';
 import { Heatmap } from '@/components/charts/Heatmap';
 import { PageTitle, Select } from '@/components/ui/basics';
 import { AnimatedNumber, Segmented, Stagger, staggerChild } from '@/components/ui/motion';
-import { IconTrophy } from '@/components/icons';
+import { IconDumbbell, IconFood, IconScale, IconTrophy } from '@/components/icons';
+import { MealIcon } from '@/components/nutrition/MealIcon';
+
+function TabLabel({ icon, text }: { icon: ReactNode; text: string }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-1.5">
+      {icon}
+      {text}
+    </span>
+  );
+}
 
 type Tab = 'food' | 'training' | 'body';
 type Range = '7' | '30' | '90';
@@ -51,9 +61,9 @@ export function StatsPage() {
         value={tab}
         onChange={(t) => setParams(t === 'food' ? {} : { tab: t }, { replace: true })}
         options={[
-          { value: 'food', label: '🍽️ Essen' },
-          { value: 'training', label: '🏋️ Training' },
-          { value: 'body', label: '⚖️ Körper' },
+          { value: 'food', label: <TabLabel icon={<IconFood size={16} />} text="Essen" /> },
+          { value: 'training', label: <TabLabel icon={<IconDumbbell size={16} />} text="Training" /> },
+          { value: 'body', label: <TabLabel icon={<IconScale size={16} />} text="Körper" /> },
         ]}
       />
       <Segmented
@@ -149,7 +159,7 @@ function FoodStats({ from, today, days }: { from: DateString; today: DateString;
         <Kpi label="Ø Kalorien" value={avgMacros.kcal} suffix=" kcal" hint={goals ? `Ziel ${goals.calories}` : undefined} />
         <Kpi label="Ø Protein" value={avgMacros.protein} suffix=" g" hint={goals ? `Ziel ${goals.protein_g} g` : undefined} />
         <Kpi label="Tage im Ziel" value={onTarget} suffix={`/${logged.length}`} hint="±10 % kcal, ≥90 % Protein" />
-        <Kpi label="Serie 🔥" value={streak} suffix=" Tage" hint="Tage in Folge getrackt" />
+        <Kpi label="Serie" value={streak} suffix=" Tage" hint="Tage in Folge getrackt" />
       </div>
 
       <ChartCard title="Kalorien" subtitle={days <= 7 ? 'pro Tag' : 'Ø pro Woche (getrackte Tage)'}>
@@ -186,8 +196,8 @@ function FoodStats({ from, today, days }: { from: DateString; today: DateString;
         <div className="space-y-3">
           {mealAvg.map((m, i) => (
             <div key={m.id} className="flex items-center gap-3">
-              <span className="w-32 shrink-0 whitespace-nowrap text-sm">
-                {m.emoji} {m.label}
+              <span className="flex w-32 shrink-0 items-center gap-2 whitespace-nowrap text-sm">
+                <MealIcon meal={m.id} size={16} className="muted" /> {m.label}
               </span>
               <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-200 dark:bg-white/[0.07]">
                 <motion.div
@@ -385,7 +395,7 @@ function TrainingStats({ from, today }: { from: DateString; today: DateString })
           to={today}
           color="#8b5cf6"
           values={trainingDays}
-          describe={(d, v) => `${formatDateShort(d)} · ${v ? 'trainiert 💪' : 'kein Training'}`}
+          describe={(d, v) => `${formatDateShort(d)} · ${v ? 'trainiert' : 'kein Training'}`}
         />
       </ChartCard>
     </Stagger>

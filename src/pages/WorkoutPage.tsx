@@ -7,9 +7,17 @@ import { errorMessage } from '@/hooks/queries';
 import { ExerciseCard } from '@/components/training/ExerciseCard';
 import { AddExerciseSheet } from '@/components/training/AddExerciseSheet';
 import { Button, EmptyState, Field, Input, Textarea } from '@/components/ui/basics';
-import { AnimatedNumber, Sheet, useConfetti } from '@/components/ui/motion';
+import { AnimatedNumber, Sheet } from '@/components/ui/motion';
 import { useToast } from '@/components/ui/toast';
-import { IconCheck, IconChevronLeft, IconEdit, IconPlus, IconTrash } from '@/components/icons';
+import {
+  IconCheck,
+  IconChevronLeft,
+  IconDumbbell,
+  IconEdit,
+  IconInfo,
+  IconPlus,
+  IconTrash,
+} from '@/components/icons';
 
 export function WorkoutPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,7 +25,6 @@ export function WorkoutPage() {
   const { data: workout, isLoading, error } = useWorkout(id);
   const update = useUpdateWorkout();
   const { showToast } = useToast();
-  const confetti = useConfetti();
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [notes, setNotes] = useState('');
@@ -38,7 +45,7 @@ export function WorkoutPage() {
   if (error || !workout) {
     return (
       <EmptyState
-        emoji="🤷"
+        icon={<IconInfo size={28} />}
         title="Einheit nicht gefunden"
         description={error ? errorMessage(error) : 'Vielleicht wurde sie gelöscht.'}
         action={<Button onClick={() => navigate('/training')}>Zum Trainingsplan</Button>}
@@ -58,8 +65,7 @@ export function WorkoutPage() {
       {
         onSuccess: () => {
           if (!done) {
-            confetti.fire();
-            showToast('Stark! Einheit erledigt 💪', 'success');
+            showToast('Einheit abgeschlossen', 'success');
           }
         },
         onError: (err) => showToast(errorMessage(err), 'error'),
@@ -69,7 +75,6 @@ export function WorkoutPage() {
 
   return (
     <div className="space-y-4">
-      {confetti.node}
       <Link
         to={`/training?week=${weekStart}`}
         className="-ml-1 inline-flex items-center gap-1 text-sm font-medium muted hover:text-surface-900 dark:hover:text-white"
@@ -125,7 +130,7 @@ export function WorkoutPage() {
       </div>
 
       {workout.workout_exercises.length === 0 && (
-        <EmptyState emoji="🏋️" title="Noch keine Übungen" description="Füg deine erste Übung hinzu – mit Gewicht und Wiederholungen je Satz." />
+        <EmptyState icon={<IconDumbbell size={28} />} title="Noch keine Übungen" description="Füg deine erste Übung hinzu – mit Gewicht und Wiederholungen je Satz." />
       )}
 
       <Button variant="secondary" className="w-full" onClick={() => setAddOpen(true)}>
