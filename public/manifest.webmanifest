@@ -1,14 +1,14 @@
 {
   "name": "GymPact",
   "short_name": "GymPact",
-  "description": "Die private Accountability-App für eure Fitness-Challenge.",
+  "description": "Dein persönlicher Tracker für Ernährung, Training und Fortschritt.",
   "lang": "de",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fafaf8",
-  "theme_color": "#fafaf8",
+  "background_color": "#0a0b0f",
+  "theme_color": "#0a0b0f",
   "icons": [
     {
       "src": "/icons/icon-192.png",

@@ -1,6 +1,6 @@
 /* GymPact Service Worker: App-Shell-Caching + Web Push. */
 
-const CACHE_NAME = 'gympact-v1';
+const CACHE_NAME = 'gympact-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

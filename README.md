@@ -1,137 +1,97 @@
 # GymPact
 
-**GymPact** ist eine private, mobile-first Progressive Web App für Paare und
-kleine Freundesgruppen: Während einer zeitlich begrenzten Fitness-Challenge
-trackt jedes Mitglied seine täglichen Gewohnheiten und sieht den Fortschritt
-der anderen. Freundliche, niemals anonyme Erinnerungen halten alle bei der
-Stange – ganz ohne Social-Media-Lärm und aggressive Gamification.
+**GymPact** ist eine private, mobile-first Progressive Web App, um den
+**eigenen Fortschritt** zu tracken – Ernährung, Training und Statistiken an
+einem Ort. Mehrere Nutzer (z. B. Geschwister, Freunde) können die App
+gemeinsam verwenden; jeder sieht ausschließlich seine eigenen Daten.
 
-Die erste Challenge läuft vom **20. Juli 2026 bis 15. Oktober 2026**;
-beliebige Zeiträume werden unterstützt.
+## Bereiche
+
+- **Heute** – Dashboard: Kalorienring, Makros, heutige Trainingseinheit,
+  7-Tage-Kalorien, Gewichtstrend, Wasser.
+- **Essen** – Einträge je Mahlzeit (Frühstück, Mittagessen, Abendessen,
+  Snacks) mit Kalorien, Protein, Kohlenhydraten und Fett. Lebensmittel aus
+  der gemeinsamen Bibliothek, der **Open-Food-Facts**-Datenbank (online,
+  ohne API-Key) oder als Schnell-Eintrag. „Zuletzt gegessen“, Mahlzeit bzw.
+  ganzen Tag vom Vortag übernehmen, Wasser-Tracker, Körpergewicht.
+- **Training** – Trainingsplan **in Wochen** (KW): Einheiten → Übungen →
+  Sätze mit Gewicht und Wiederholungen. „Vorwoche übernehmen“ kopiert den
+  kompletten Plan inkl. Gewichten; jede Übung zeigt „Letztes Mal“, erkennt
+  neue Bestleistungen (PR) und schätzt das 1RM.
+  **Körper 3D**: interaktives three.js-Modell mit Muskelgruppen – antippen,
+  die Figur dreht sich, die Gruppe wird rot markiert und daneben erscheinen
+  deine Übungen dafür. Grün eingefärbt = viel trainiert (4 Wochen).
+- **Statistik** – Ernährung (3D-Balken Kalorien, Proteinverlauf,
+  3D-Makro-Donut, Mahlzeiten, Tracking-Kalender), Training (Volumen je
+  Woche, Kraftentwicklung je Übung, Bestleistungen, Muskelgruppen,
+  Trainingstage) und Körper (Gewicht, Wasser). 7/30/90 Tage.
+- **Profil** – Name, Avatar, Zeitzone, Ernährungsziele mit Bedarfsrechner
+  (Mifflin-St Jeor), Hell/Dunkel.
+- **Admin** – Nutzerübersicht mit Aktivitäts-Zählwerten (keine Inhalte).
+
+## Update auf die Tracker-Version (Migration 0009)
+
+**Pflicht nach dem Deploy:** `supabase/migrations/0009_tracker.sql` einmal
+im Supabase-SQL-Editor ausführen (oder `supabase db push`). Sie legt die
+neuen Tabellen samt RLS an, die RPCs `copy_training_week` und
+`admin_user_overview` und schaltet den alten Erinnerungs-Cron ab. Die
+alten Challenge-Tabellen bleiben unverändert erhalten, werden aber nicht
+mehr genutzt. Ohne diese Migration zeigt die App einen Hinweis statt Daten.
 
 ---
 
 ## Architektur
 
-**Entscheidung: „Thin Client, sicherer Kern in der Datenbank“.**
-Das React-Frontend spricht direkt mit Supabase (PostgREST, Auth, Realtime,
-Storage). Es gibt bewusst keinen eigenen API-Server – die Korrektheits- und
-Sicherheitsgarantien liegen in der Datenbank:
+**„Thin Client, sicherer Kern in der Datenbank“.** Das React-Frontend
+(Vite, TypeScript, Tailwind, TanStack Query, framer-motion, three.js)
+spricht direkt mit Supabase. Row Level Security auf jeder Tabelle ist die
+einzige Wahrheit über Zugriffsrechte; jede Zeile gehört genau einem Nutzer
+(`user_id = auth.uid()`). Ausnahme: die Lebensmittel-Bibliothek `foods`
+ist für alle angemeldeten Nutzer lesbar (gemeinsam gepflegt), ändern darf
+nur, wer den Eintrag angelegt hat.
 
-- **Row Level Security auf jeder Tabelle** ist die einzige Wahrheit über
-  Zugriffsrechte. Der Client kann nichts erzwingen, was RLS nicht erlaubt.
-- **Alles Heikle läuft über SECURITY-DEFINER-RPCs** (`create_group`,
-  `join_group`, `leave_group`, `send_reminder`, …). Dort sitzen Validierung,
-  Cooldowns, Ruhezeiten-Checks – unabhängig von jeder Client-Validierung.
-- **Abgeleitete Werte werden serverseitig berechnet**: `habit_entries.completed`
-  setzt ein Trigger aus Typ + Zielwert; Datums-/Statusregeln für Check-ins
-  prüft ein Trigger (`validate_checkin`).
-- **Edge Functions nur für Dinge, die die DB nicht kann**: Web-Push-Versand
-  (VAPID-Private-Key!) und der Cron-Job für automatische Erinnerungen.
-  Der Service-Role-Key existiert ausschließlich dort.
-- **Frontend-State**: TanStack Query als Cache über PostgREST, Supabase
-  Realtime invalidiert gezielt (neue Benachrichtigungen, Gruppen-Check-ins).
-  Check-ins speichern sofort (Booleans) bzw. mit kurzem Debounce (Zahlen,
-  Gewicht, Notiz) – klassisches Autosave mit Statusanzeige.
+**Zeitzonen-Modell:** Die App rechnet mit lokalen Kalenderdaten
+(`YYYY-MM-DD`) in der Profil-Zeitzone – nie mit UTC-Mitternacht.
 
-**Zeitzonen-Modell:** Die App rechnet konsequent mit *lokalen Kalenderdaten*
-(`YYYY-MM-DD`) in der Profil-Zeitzone des Nutzers – nie mit UTC-Mitternacht.
-Serverseitig liefert `user_local_date()` dasselbe Datum für RPC-Prüfungen.
-
-## Ordnerstruktur
+## Ordnerstruktur (Auszug)
 
 ```
-GymPact/
-├── index.html                  # Shell, Theme-Bootstrapping, PWA-Meta
-├── public/
-│   ├── manifest.webmanifest    # PWA-Manifest
-│   ├── sw.js                   # Service Worker: App-Shell-Cache + Web Push
-│   └── icons/                  # generierte App-Icons (npm run icons)
-├── scripts/
-│   └── generate-icons.mjs      # PNG-Icon-Generator (ohne Abhängigkeiten)
-├── src/
-│   ├── main.tsx                # Einstieg: Provider, SW-Registrierung
-│   ├── App.tsx                 # Routen (öffentlich/geschützt)
-│   ├── index.css               # Tailwind + Basis-Styles (Safe-Areas, Fokus)
-│   ├── context/
-│   │   └── AuthProvider.tsx    # Supabase-Session als React-Context
-│   ├── hooks/
-│   │   ├── queries.ts          # ALLE Daten-Hooks (TanStack Query + Realtime)
-│   │   ├── useCheckinManager.ts# Autosave-Logik des Tages-Check-ins
-│   │   ├── useActiveGroup.ts   # aktive Gruppe (persistiert)
-│   │   ├── useToday.ts         # "heute" in der Nutzer-Zeitzone
-│   │   └── useTheme.ts         # Light/Dark/System
-│   ├── lib/
-│   │   ├── supabase.ts         # typisierter Client
-│   │   ├── database.types.ts   # handgepflegte Schema-Typen
-│   │   ├── dates.ts            # Kalenderdatum-Helfer (getestet)
-│   │   ├── stats.ts            # Serien, Quoten, Kennzahlen (getestet)
-│   │   ├── push.ts             # Push-Abo-Registrierung, iOS-Erkennung
-│   │   └── validation.ts       # Zod-Schemata aller Formulare
-│   ├── components/
-│   │   ├── AppLayout.tsx       # Header + Bottom-Navigation
-│   │   ├── RequireAuth.tsx     # Routen-Schutz
-│   │   ├── icons.tsx           # Inline-SVG-Icons
-│   │   ├── ui/                 # Button, Input, Toggle, Ring, Avatar, Toast …
-│   │   ├── checkin/            # HabitRow, SaveStatus, PersonalTargetsForm
-│   │   ├── charts/             # LineChart, WeekBars, CalendarGrid (SVG)
-│   │   └── progress/           # GroupProgress (gemeinsame Gruppenansicht)
-│   └── pages/
-│       ├── auth/               # Login, Registrierung, Passwort-Reset
-│       ├── TodayPage.tsx       # Dashboard + Tages-Check-in
-│       ├── GroupPage.tsx       # Gruppe, Einladungen, Erinnerungen
-│       ├── NewChallengePage.tsx# Challenge- & Gewohnheiten-Builder
-│       ├── ProgressPage.tsx    # Umschalter Ich/Gruppe: Diagramme, Kalender, Gruppenansicht
-│       ├── NotificationsPage.tsx
-│       ├── SettingsPage.tsx    # Profil, Darstellung, Benachrichtigungen
-│       ├── AdminPage.tsx       # App-weite Übersicht (nur für Admins)
-│       └── JoinPage.tsx        # /join/:code
-└── supabase/
-    ├── migrations/
-    │   ├── 0001_schema.sql     # Tabellen, Constraints, Trigger, Storage-Bucket
-    │   ├── 0002_rls.sql        # RLS-Policies + Hilfsfunktionen
-    │   ├── 0003_functions.sql  # RPCs (Gruppen, Reminder, Cooldowns)
-    │   ├── 0004_realtime.sql   # Realtime-Publikationen
-    │   ├── 0005_admin.sql      # App-weiter Admin-Zugang (app_admins, Policies)
-    │   ├── 0006_habit_targets.sql # persönliche Zielwerte je Nutzer
-    │   └── 0007_group_targets_email.sql # Ziele gruppenweit lesbar, E-Mail default an
-    └── functions/
-        │                       # (Functions sind eigenständig – ohne Shared-Imports)
-        ├── send-push/          # stellt eine Notification per Push/E-Mail zu
-        └── auto-reminders/     # Cron: erinnert an offene Gewohnheiten
+src/
+├── pages/                 # Home, Nutrition, Training, Workout, Stats, Settings, Admin, auth/
+├── components/
+│   ├── body/              # 3D-Körper: BodyScene (three.js, lazy geladen), BodyView
+│   ├── charts/            # Ring, MacroBar, Bars3D (CSS-3D), LineChart, Donut3D, Heatmap
+│   ├── nutrition/         # AddFoodSheet, AmountPicker, DaySummary, Water/WeightCard
+│   ├── training/          # ExerciseCard, AddExerciseSheet, AddWorkoutSheet
+│   └── ui/                # basics, motion (Sheet, Segmented, AnimatedNumber, Tilt, Konfetti)
+├── hooks/                 # nutrition.ts, training.ts, queries.ts (Profil/Admin)
+└── lib/                   # nutrition.ts, training.ts, muscles.ts, openFoodFacts.ts, dates.ts (+ Tests)
+supabase/migrations/0009_tracker.sql   # Tracker-Schema
 ```
 
-## Datenmodell (Kurzüberblick)
+## Datenmodell (Tracker)
 
-| Tabelle | Zweck | Wichtige Constraints |
-| --- | --- | --- |
-| `profiles` | Anzeigename, Avatar, Zeitzone | 1:1 zu `auth.users`, Auto-Anlage per Trigger |
-| `groups` | private Gruppe | `invite_code` unique |
-| `group_members` | Mitgliedschaft + Rolle | PK `(group_id, user_id)`, Rolle `owner/member` |
-| `challenges` | Challenge einer Gruppe | **max. 1 aktive pro Gruppe** (partieller Unique-Index), `end >= start` |
-| `habits` | konfigurierbare Gewohnheiten | boolesch ohne / numerisch mit Standard-Zielwert (`check`), sortierbar |
-| `habit_targets` | persönlicher Zielwert je Nutzer | PK `(habit_id, user_id)`, überschreibt den Standardwert der Gewohnheit |
-| `daily_checkins` | ein Eintrag pro Tag | **unique `(challenge_id, user_id, date)`**, Datum im Zeitraum (Trigger) |
-| `habit_entries` | Werte je Gewohnheit | unique `(checkin_id, habit_id)`, `completed` per Trigger berechnet |
-| `reminders` | manuelle Erinnerungen | unique `(sender, recipient, habit, date)` = Tages-Cooldown |
-| `notifications` | In-App-Postfach | Quelle für Push-/E-Mail-Zustellung |
-| `push_subscriptions` | Web-Push-Abo je Gerät | `endpoint` unique, nur Besitzer lesbar |
-| `notification_preferences` | Kanäle, Ruhezeiten, Auto-Reminder | 1:1 zu `profiles` |
+| Tabelle | Zweck |
+| --- | --- |
+| `nutrition_goals` | Tagesziele kcal/Makros/Wasser (1:1 Nutzer) |
+| `foods` | gemeinsame Lebensmittel-Bibliothek, Nährwerte je 100 g |
+| `food_entries` | Einträge je Tag + Mahlzeit, absolute Werte |
+| `daily_logs` | Wasser, Körpergewicht, Notiz je Tag |
+| `training_weeks` | Trainingswoche (Montag, unique je Nutzer) |
+| `workouts` | Einheit einer Woche (Name, Wochentag, erledigt) |
+| `workout_exercises` | Übung (Name, Muskelgruppe) |
+| `exercise_sets` | Satz: Gewicht, Wiederholungen, erledigt |
 
 ## Sicherheit
 
-- RLS auf **jeder** Tabelle; Mitglieder lesen nur Daten der eigenen Gruppen,
-  Check-ins/Einträge schreibt ausschließlich der Besitzer.
-- Erinnerungen entstehen **nur** über `send_reminder`: prüft Mitgliedschaft
-  beider Seiten, aktive Challenge, offene Gewohnheit, Ruhezeiten,
-  Empfänger-Einstellungen, 10-Minuten-Burst-Schutz und den Tages-Cooldown.
-- Push-Endpunkte/Schlüssel: RLS `user_id = auth.uid()`, kein öffentlicher Zugriff.
-- Keine Service-Role-Keys im Frontend; Secrets nur als Edge-Function-Secrets.
-- Validierung doppelt: Zod im Client, Constraints/Trigger/RPCs im Server.
-- XSS: React-Escaping, keine `dangerouslySetInnerHTML`. CSRF: tokenbasierte
-  Auth (Bearer JWT, kein Cookie-Implicit-Trust). Spam: serverseitige Cooldowns.
-
----
+- RLS auf **jeder** Tabelle; alle Tracker-Daten sind strikt pro Nutzer.
+  Ein Trigger stellt sicher, dass Einheiten/Übungen/Sätze nur unter eigene
+  Wochen gehängt werden können.
+- `copy_training_week` läuft als SECURITY INVOKER (RLS greift),
+  `admin_user_overview` prüft `is_app_admin()` und liefert nur Zählwerte.
+- Keine Service-Role-Keys im Frontend. Validierung doppelt: Client + DB-Checks.
+- Die Edge Functions `send-push`/`auto-reminders` aus der Challenge-Zeit
+  werden von der App nicht mehr verwendet und können gelöscht werden.
 
 ## Lokale Entwicklung
 
@@ -158,122 +118,13 @@ npm run icons               # App-Icons neu generieren
    eintragen (für Passwort-Reset und E-Mail-Bestätigung).
 4. `VITE_SUPABASE_URL` und `VITE_SUPABASE_ANON_KEY` in `.env` übernehmen.
 
-## Web Push einrichten
-
-**Ohne diesen Schritt kommt nie eine Push-Benachrichtigung an**, egal wie die
-Schalter stehen: Die Schalter speichern nur eine Präferenz, verschickt wird
-die Nachricht von der Edge Function `send-push`. Beide Functions sind
-bewusst in sich geschlossen (keine Shared-Imports), damit sie sich sowohl per
-CLI als auch direkt im **Supabase-Dashboard** deployen lassen.
-
-1. VAPID-Schlüsselpaar erzeugen (einmalig):
-   ```bash
-   npx web-push generate-vapid-keys
-   ```
-2. Public Key ins Frontend: `VITE_VAPID_PUBLIC_KEY` (Hostinger-Env-Var + `.env`)
-   – danach neu bauen/deployen.
-3. VAPID-Secrets für die Edge Functions setzen.
-4. Beide Functions `send-push` und `auto-reminders` deployen.
-5. Optional (empfohlen): **Database Webhook** – *Database → Webhooks → neue
-   Hook* auf `INSERT` in `public.notifications`, Ziel: `send-push`. Dann wird
-   jede Notification automatisch zugestellt, auch ohne Client-Aufruf.
-
-### Variante A – Supabase-Dashboard (ohne CLI)
-
-- **Secrets:** *Edge Functions → Secrets* (bzw. *Project Settings → Edge
-  Functions*): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
-  `VAPID_SUBJECT` = `mailto:deine-mail@example.com` eintragen. (Optional für
-  E-Mail: `RESEND_API_KEY`, `EMAIL_FROM`.)
-- **Deploy:** *Edge Functions → Deploy a new function*, Name exakt
-  `send-push`, den kompletten Inhalt von
-  `supabase/functions/send-push/index.ts` einfügen, deployen. Dasselbe mit
-  `auto-reminders`.
-
-### Variante B – Supabase CLI
-
-```bash
-supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... \
-  VAPID_SUBJECT=mailto:du@example.com
-supabase functions deploy send-push
-supabase functions deploy auto-reminders
-```
-
-**iOS-Voraussetzungen** (alle müssen erfüllt sein, sonst kommt keine Push):
-1. iOS 16.4 oder neuer.
-2. App über *Teilen → „Zum Home-Bildschirm“* installiert und **von dort**
-   (nicht aus Safari) geöffnet.
-3. In *Einstellungen → Benachrichtigungen* den Geräte-Button **„Aktivieren“**
-   gedrückt und die Berechtigung erlaubt (der „Web-Push“-Schalter allein legt
-   noch kein Abo an – erst „Aktivieren“ registriert das Push-Abonnement).
-4. `send-push` ist deployt und die VAPID-Secrets sind gesetzt (siehe oben).
-
-## Automatische Erinnerungen (Cron)
-
-Die Function `auto-reminders` prüft alle Nutzer mit aktivierter
-Auto-Erinnerung: Zeitzone, konfigurierte Uhrzeit (15-Minuten-Fenster),
-Ruhezeiten, aktive Challenge, offene `auto_remind`-Gewohnheiten und ob heute
-schon erinnert wurde. Zeitplan per `pg_cron` + `pg_net` (SQL-Editor):
-
-```sql
-select cron.schedule(
-  'gympact-auto-reminders',
-  '*/15 * * * *',
-  $$
-  select net.http_post(
-    url := 'https://<ref>.supabase.co/functions/v1/auto-reminders',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer <SUPABASE_ANON_KEY>'
-    ),
-    body := '{}'::jsonb
-  );
-  $$
-);
-```
-
-## Gruppenansicht (Fortschritt → „Gruppe“)
-
-Der Fortschritt-Tab hat oben einen Umschalter **Ich / Gruppe**. Die
-Gruppenansicht zeigt live (Supabase Realtime), wie weit alle sind:
-
-- **Heute als Gruppe** – gemeinsamer Fortschrittsring (Durchschnitt) und
-  wie viele Personen schon komplett sind.
-- **Detail-Karten je Mitglied** – jede Person mit Avatar + Mini-Ring und
-  ALLEN Gewohnheiten im Detail: boolesche als Haken, numerische mit echtem
-  Wert gegen das persönliche Ziel (z. B. „Protein: 35 / 180 g“) samt
-  Fortschrittsbalken. So sieht die Gruppe, wer wo steht und was noch fehlt.
-- **Was fehlt heute noch?** – je Gewohnheit ein Balken „x/n erledigt“ plus
-  die Avatare derjenigen, bei denen sie noch offen ist.
-- **Gesamt-Fortschritt** – Balkenvergleich der durchschnittlichen Erfüllung
-  seit dem Start, mit vollen Tagen je Person.
-
-Alle Werte stammen aus `daily_checkins`/`habit_entries` und respektieren die
-persönlichen Zielwerte (das `completed`-Flag wird serverseitig je Nutzer
-berechnet). Private Notizen und Gewicht bleiben außen vor.
-
-## Persönliche Zielwerte
-
-Numerische Gewohnheiten (z. B. „Protein erreicht“) haben ein gemeinsames
-**Thema** für die ganze Gruppe, aber einen **persönlichen Zielwert** je
-Nutzer – die eine nimmt 180 g Protein, der andere 160 g. `habits.target_value`
-ist dabei der Standard-/Vorschlagswert, den der Owner beim Anlegen der
-Challenge setzt; `habit_targets` überschreibt ihn pro Nutzer.
-
-Sobald ein Mitglied eine aktive Challenge mit numerischen Gewohnheiten sieht,
-für die es noch kein eigenes Ziel eingetragen hat (z. B. direkt nach dem
-Beitritt über den Einladungslink), zeigt „Heute“ statt des Check-ins zuerst
-ein Formular zum Eintragen der persönlichen Ziele – der Check-in selbst bleibt
-so lange gesperrt. Ziele lassen sich danach jederzeit unter *Einstellungen →
-Meine Ziele* anpassen.
-
 ## Admin-Bereich einrichten
 
 GymPact kennt neben den Gruppen-Rollen `owner`/`member` optional einen
 **App-weiten Admin-Zugang** (Migration `0005_admin.sql`): Admins sehen unter
-`/admin` (Link erscheint automatisch in den Einstellungen) alle Gruppen,
-Mitgliederzahlen und Challenges gruppenübergreifend und können Gruppen
-löschen. Bewusst **nicht** einsehbar: private Check-ins, Notizen, Gewicht,
-Erinnerungen, Benachrichtigungen und Push-Abos anderer Nutzer.
+`/admin` (Link erscheint automatisch im Profil) alle Nutzer mit
+Aktivitäts-Zählwerten (getrackte Tage, Trainingswochen, Workouts). Bewusst
+**nicht** einsehbar: Essen, Gewicht, Notizen oder Trainingsinhalte anderer.
 
 Admin-Rechte werden aus Sicherheitsgründen **nicht** über die App vergeben,
 sondern nur manuell im SQL-Editor – dafür gibt es keine RPC, also keinen
@@ -288,37 +139,13 @@ on conflict (user_id) do nothing;
 
 Admin-Rechte entziehen: `delete from public.app_admins where user_id = '<uuid>';`
 
-## E-Mail-Benachrichtigungen
-
-E-Mails werden verschickt, sobald der Kanal aktiviert ist (Standard: **an**,
-seit Migration 0007) – unabhängig davon, ob Push funktioniert. Dafür muss
-ein Mail-Anbieter als Edge-Function-Secret hinterlegt sein:
-
-**Variante Brevo (empfohlen – kostenlos, keine eigene Domain nötig):**
-1. Konto auf [brevo.com](https://www.brevo.com) anlegen (Free: 300 Mails/Tag).
-2. Unter *Senders & IPs → Senders* die eigene Absender-Adresse verifizieren
-   (z. B. deine Gmail-Adresse – Bestätigungslink anklicken).
-3. Unter *SMTP & API → API Keys* einen Key erzeugen.
-4. Secrets setzen (Dashboard: *Edge Functions → Secrets*):
-   - `BREVO_API_KEY` = der API-Key
-   - `EMAIL_FROM` = `GymPact <deine-verifizierte-adresse@gmail.com>`
-
-**Variante Resend:** `RESEND_API_KEY` + `EMAIL_FROM` setzen. Achtung: Ohne
-verifizierte eigene Domain erlaubt Resend nur Mails an die eigene
-Account-Adresse – für Gruppen mit mehreren Empfängern also Brevo nehmen
-oder eine Domain verifizieren.
-
-Beide Edge Functions (`send-push`, `auto-reminders`) prüfen zuerst
-`BREVO_API_KEY`, dann `RESEND_API_KEY`. Ruhezeiten des Empfängers gelten
-auch für E-Mails.
-
 ## Deployment (Frontend)
 
 Statisches SPA – z. B. Vercel, Netlify, Cloudflare Pages oder Hostinger:
 
 1. Build-Command `npm run build`, Output `dist/`.
 2. Umgebungsvariablen `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
-   `VITE_VAPID_PUBLIC_KEY` setzen.
+   ggf. `VITE_VAPID_PUBLIC_KEY` setzen.
 3. SPA-Fallback aktivieren (alle Pfade → `/index.html`).
    - Netlify: `/_redirects` mit `/* /index.html 200`
    - Vercel: erkennt Vite automatisch
@@ -357,9 +184,10 @@ dann lassen sich Env-Variablen auch in einer Build-Pipeline auf dem VPS setzen.
 
 ## Tests & Fehlerbehandlung
 
-- `npm test`: Vitest-Suite für die kritische Fachlogik (Tagesquoten, Serien,
-  Wochenstatistik, Zeitzonen-Datumslogik) – 23 Tests.
-- Fehlerpfade: Formulare zeigen Feld- und Serverfehler; Autosave hat einen
-  sichtbaren Status (Speichert…/Gespeichert/Fehler); RPC-Fehlermeldungen
-  (z. B. Cooldown, Ruhezeit) erscheinen als Toast; abgelaufene Push-Abos
-  werden serverseitig aufgeräumt.
+- `npm test`: Vitest-Suite für die Fachlogik (Makro-Berechnung, Tagessummen,
+  Ziele/Serien, Bedarfsrechner, Volumen/1RM/Bestwerte, Kalenderwochen,
+  Muskelgruppen-Erkennung, Datumslogik) – 43 Tests.
+- Fehlerpfade: Formulare validieren im Client, Serverfehler erscheinen als
+  Toast; fehlt Migration 0009, zeigt die App einen klaren Hinweis.
+  Optimistische Updates (Einträge, Sätze, Wasser) sorgen für sofortiges
+  Feedback und werden nach dem Speichern mit dem Server abgeglichen.

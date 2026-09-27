@@ -11,14 +11,18 @@ function applyTheme(pref: ThemePreference) {
   document.documentElement.classList.toggle('dark', dark);
 }
 
-/** Light/Dark Mode mit System-Standard; Auswahl wird lokal gespeichert. */
+/** Light/Dark Mode (Standard: dunkel); Auswahl wird lokal gespeichert. */
 export function useTheme(): {
   theme: ThemePreference;
   setTheme: (pref: ThemePreference) => void;
 } {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'light' || stored === 'dark' ? stored : 'system';
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored === 'light' || stored === 'system' ? stored : 'dark';
+    } catch {
+      return 'dark';
+    }
   });
 
   useEffect(() => {
@@ -31,8 +35,11 @@ export function useTheme(): {
   }, [theme]);
 
   const setTheme = useCallback((pref: ThemePreference) => {
-    if (pref === 'system') localStorage.removeItem(STORAGE_KEY);
-    else localStorage.setItem(STORAGE_KEY, pref);
+    try {
+      localStorage.setItem(STORAGE_KEY, pref);
+    } catch {
+      // Speicher blockiert – Auswahl gilt nur für diese Sitzung.
+    }
     setThemeState(pref);
   }, []);
 

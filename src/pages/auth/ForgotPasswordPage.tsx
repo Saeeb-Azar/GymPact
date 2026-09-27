@@ -75,7 +75,7 @@ export function ForgotPasswordPage() {
       <p className="mt-5 text-center text-sm">
         <Link
           to="/login"
-          className="font-medium text-brand-700 hover:underline dark:text-brand-300"
+          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
         >
           Zurück zur Anmeldung
         </Link>

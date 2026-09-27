@@ -127,7 +127,7 @@ export function RegisterPage() {
         Schon ein Konto?{' '}
         <Link
           to={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
-          className="font-medium text-brand-700 hover:underline dark:text-brand-300"
+          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
         >
           Anmelden
         </Link>

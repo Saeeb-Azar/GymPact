@@ -1,5 +1,4 @@
-// „Einstellungen“: Profil (Name, Avatar, Zeitzone), Darstellung,
-// Benachrichtigungen inkl. Web-Push und Ruhezeiten, Abmelden.
+// Profil, Ernährungsziele (mit Bedarfsrechner), Darstellung, Konto.
 
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -7,60 +6,43 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
-import { useActiveGroup } from '@/hooks/useActiveGroup';
-import {
-  useActiveChallenge,
-  useIsAdmin,
-  useMyHabitTargets,
-  useNotificationPreferences,
-  useProfile,
-  useSendTestPush,
-  useSetHabitTarget,
-  useUpdateNotificationPreferences,
-  useUpdateProfile,
-} from '@/hooks/queries';
+import { errorMessage, useIsAdmin, useProfile, useUpdateProfile } from '@/hooks/queries';
+import { useLatestWeight, useNutritionGoals, useSaveNutritionGoals } from '@/hooks/nutrition';
 import { useTheme, type ThemePreference } from '@/hooks/useTheme';
-import {
-  disablePush,
-  enablePush,
-  hasActivePushSubscription,
-  iosNeedsInstallForPush,
-  pushSupported,
-} from '@/lib/push';
 import { profileSchema, type ProfileValues } from '@/lib/validation';
-import { availableTimezones, toTimeInputValue } from '@/lib/dates';
+import { availableTimezones } from '@/lib/dates';
 import {
-  Button,
-  Card,
-  Field,
-  Input,
-  PageTitle,
-  Select,
-  Spinner,
-  Toggle,
-} from '@/components/ui/basics';
+  ACTIVITY_LEVELS,
+  macroEnergySplit,
+  suggestGoals,
+  type GoalType,
+  type Sex,
+} from '@/lib/nutrition';
+import { Button, Card, Field, Input, PageTitle, Select, Spinner } from '@/components/ui/basics';
+import { Segmented, Sheet } from '@/components/ui/motion';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui/toast';
 import { OnboardingGuide } from '@/components/OnboardingGuide';
-import { IconLogout, IconSettings } from '@/components/icons';
+import { IconChevronRight, IconLogout, IconShield, IconSparkles } from '@/components/icons';
 
 export function SettingsPage() {
   const { user, signOut } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const isAdmin = useIsAdmin();
   const [showGuide, setShowGuide] = useState(false);
+  const { showToast } = useToast();
 
   if (isLoading || !profile || !user) {
     return (
       <div className="flex justify-center py-20">
-        <Spinner className="h-8 w-8 text-brand-600" />
+        <Spinner className="h-8 w-8 text-brand-500" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <PageTitle>Einstellungen</PageTitle>
+      <PageTitle eyebrow="Profil">Einstellungen</PageTitle>
       <ProfileSection
         userId={user.id}
         email={user.email ?? ''}
@@ -68,29 +50,33 @@ export function SettingsPage() {
         avatarUrl={profile.avatar_url}
         timezone={profile.timezone}
       />
-      <MyGoalsSection />
+      <GoalsSection />
       <AppearanceSection />
-      <NotificationSection userId={user.id} />
       {isAdmin && (
-        <Link to="/admin">
-          <Card className="flex items-center gap-3">
-            <IconSettings size={20} className="text-brand-700 dark:text-brand-300" />
-            <span className="font-medium">Admin-Bereich</span>
-          </Card>
+        <Link to="/admin" className="card flex items-center gap-3 p-4">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 text-white">
+            <IconShield size={20} />
+          </span>
+          <span className="flex-1">
+            <span className="block font-semibold">Admin-Bereich</span>
+            <span className="block text-xs muted">Nutzer & Aktivität verwalten</span>
+          </span>
+          <IconChevronRight className="muted" />
         </Link>
       )}
       {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
       <Card className="space-y-3">
         <Button variant="secondary" className="w-full" onClick={() => setShowGuide(true)}>
-          Anleitung ansehen (Erste Schritte)
+          Einführung ansehen
         </Button>
         <Button
           variant="secondary"
           className="w-full"
           onClick={async () => {
-            await supabase.auth.resetPasswordForEmail(user.email ?? '', {
+            const { error } = await supabase.auth.resetPasswordForEmail(user.email ?? '', {
               redirectTo: `${window.location.origin}/reset-password`,
             });
+            showToast(error ? errorMessage(error) : 'E-Mail zum Zurücksetzen ist unterwegs', error ? 'error' : 'success');
           }}
         >
           Passwort per E-Mail zurücksetzen
@@ -99,9 +85,7 @@ export function SettingsPage() {
           <IconLogout size={18} /> Abmelden
         </Button>
       </Card>
-      <p className="pb-2 text-center text-xs text-surface-900/40 dark:text-surface-100/40">
-        GymPact · privat & werbefrei
-      </p>
+      <p className="pb-2 text-center text-xs muted">GymPact · privat & werbefrei</p>
     </div>
   );
 }
@@ -144,7 +128,7 @@ function ProfileSection({
       reset(values);
       showToast('Profil gespeichert', 'success');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Speichern fehlgeschlagen', 'error');
+      showToast(errorMessage(err), 'error');
     }
   };
 
@@ -165,7 +149,7 @@ function ProfileSection({
       await updateProfile.mutateAsync({ avatar_url: data.publicUrl });
       showToast('Avatar aktualisiert', 'success');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Upload fehlgeschlagen', 'error');
+      showToast(errorMessage(err), 'error');
     } finally {
       setUploading(false);
     }
@@ -173,7 +157,7 @@ function ProfileSection({
 
   return (
     <Card>
-      <h2 className="text-base font-semibold">Profil</h2>
+      <h2 className="font-display text-lg font-bold">Profil</h2>
       <div className="mt-3 flex items-center gap-4">
         <Avatar name={displayName} avatarUrl={avatarUrl} size={64} />
         <div>
@@ -181,7 +165,7 @@ function ProfileSection({
             type="button"
             disabled={uploading}
             onClick={() => fileInput.current?.click()}
-            className="text-sm font-medium text-brand-700 hover:underline disabled:opacity-50 dark:text-brand-300"
+            className="text-sm font-medium text-brand-600 hover:underline disabled:opacity-50 dark:text-brand-400"
           >
             {uploading ? 'Lädt hoch…' : 'Avatar ändern'}
           </button>
@@ -214,7 +198,7 @@ function ProfileSection({
           label="Zeitzone"
           htmlFor="timezone"
           error={errors.timezone?.message}
-          hint="Bestimmt, wann dein Tag endet und wann Erinnerungen kommen."
+          hint="Bestimmt, wann dein Tag endet."
         >
           <Select id="timezone" {...register('timezone')}>
             {availableTimezones().map((tz) => (
@@ -234,314 +218,237 @@ function ProfileSection({
   );
 }
 
-// ---------------------------------------------------------------- Meine Ziele
-// Persönliche Zielwerte für numerische Gewohnheiten der aktiven Challenge –
-// das Thema ist für die Gruppe gleich, der Zielwert aber individuell.
-function MyGoalsSection() {
-  const { activeGroupId } = useActiveGroup();
-  const { data: challenge } = useActiveChallenge(activeGroupId);
-  const { data: targets = [] } = useMyHabitTargets();
-  const setTarget = useSetHabitTarget();
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const timers = useRef<Record<string, number>>({});
+// ---------------------------------------------------------------- Ziele
+function GoalsSection() {
+  const { data: goals } = useNutritionGoals();
+  const save = useSaveNutritionGoals();
+  const { showToast } = useToast();
+  const [values, setValues] = useState({ calories: '', protein_g: '', carbs_g: '', fat_g: '', water_ml: '' });
+  const [calcOpen, setCalcOpen] = useState(false);
 
-  const numericHabits = (challenge?.habits ?? []).filter((h) => h.type === 'numeric');
-  if (!challenge || numericHabits.length === 0) return null;
+  useEffect(() => {
+    if (goals)
+      setValues({
+        calories: String(goals.calories),
+        protein_g: String(goals.protein_g),
+        carbs_g: String(goals.carbs_g),
+        fat_g: String(goals.fat_g),
+        water_ml: String(goals.water_ml),
+      });
+  }, [goals]);
 
-  const valueFor = (habitId: string): string => {
-    if (drafts[habitId] !== undefined) return drafts[habitId];
-    const target = targets.find((t) => t.habit_id === habitId);
-    return target ? String(target.target_value) : '';
+  const num = (s: string) => Math.round(Number(s.replace(',', '.')) || 0);
+  const parsed = {
+    calories: num(values.calories),
+    protein_g: num(values.protein_g),
+    carbs_g: num(values.carbs_g),
+    fat_g: num(values.fat_g),
+    water_ml: num(values.water_ml),
   };
+  const macroKcal = parsed.protein_g * 4 + parsed.carbs_g * 4 + parsed.fat_g * 9;
+  const valid = parsed.calories >= 500 && parsed.calories <= 10000;
+  const dirty =
+    !!goals &&
+    (goals.isDefault ||
+      (Object.keys(parsed) as (keyof typeof parsed)[]).some((k) => parsed[k] !== goals[k]));
+  const split = macroEnergySplit({ kcal: macroKcal, protein: parsed.protein_g, carbs: parsed.carbs_g, fat: parsed.fat_g });
 
-  const onChange = (habitId: string, raw: string) => {
-    setDrafts((prev) => ({ ...prev, [habitId]: raw }));
-    if (timers.current[habitId]) window.clearTimeout(timers.current[habitId]);
-    timers.current[habitId] = window.setTimeout(() => {
-      const parsed = Number(raw.trim().replace(',', '.'));
-      if (raw.trim() === '' || Number.isNaN(parsed) || parsed <= 0) return;
-      setTarget.mutate({ habitId, targetValue: parsed });
-    }, 700);
-  };
+  const field = (key: keyof typeof values, label: string, unit: string) => (
+    <Field label={label}>
+      <div className="relative">
+        <Input
+          value={values[key]}
+          onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
+          inputMode="numeric"
+          className="pr-12"
+        />
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm muted">{unit}</span>
+      </div>
+    </Field>
+  );
 
   return (
     <Card>
-      <h2 className="text-base font-semibold">Meine Ziele</h2>
-      <p className="mt-1 text-sm text-surface-900/60 dark:text-surface-100/60">
-        Deine persönlichen Zielwerte für „{challenge.name}“ – unabhängig von den
-        Zielen deiner Gruppenmitglieder.
-      </p>
-      <div className="mt-3 space-y-3">
-        {numericHabits.map((habit) => (
-          <Field key={habit.id} label={habit.name} htmlFor={`goal-${habit.id}`}>
-            <div className="flex items-center gap-2">
-              <Input
-                id={`goal-${habit.id}`}
-                type="text"
-                inputMode="decimal"
-                value={valueFor(habit.id)}
-                onChange={(e) => onChange(habit.id, e.target.value)}
-                className="text-right tabular-nums"
-              />
-              <span className="w-8 shrink-0 text-sm text-surface-900/50 dark:text-surface-100/50">
-                {habit.unit ?? ''}
-              </span>
-            </div>
-          </Field>
-        ))}
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-lg font-bold">Ernährungsziele</h2>
+        <button
+          type="button"
+          onClick={() => setCalcOpen(true)}
+          className="flex items-center gap-1.5 rounded-full bg-brand-500/15 px-3 py-1.5 text-xs font-bold text-brand-600 dark:text-brand-400"
+        >
+          <IconSparkles size={14} /> Bedarf berechnen
+        </button>
       </div>
+      {goals?.isDefault && (
+        <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+          Noch Standardwerte – passe sie an oder lass sie berechnen.
+        </p>
+      )}
+      <div className="mt-4 space-y-3">
+        {field('calories', 'Kalorien', 'kcal')}
+        <div className="grid grid-cols-3 gap-2">
+          {field('protein_g', 'Protein', 'g')}
+          {field('carbs_g', 'Kohlenh.', 'g')}
+          {field('fat_g', 'Fett', 'g')}
+        </div>
+        <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-200 dark:bg-white/[0.07]">
+          <span style={{ width: `${split.protein * 100}%`, background: '#8b5cf6' }} />
+          <span className="border-l-2 border-white dark:border-surface-850" style={{ width: `${split.carbs * 100}%`, background: '#d97706' }} />
+          <span className="border-l-2 border-white dark:border-surface-850" style={{ width: `${split.fat * 100}%`, background: '#ec4899' }} />
+        </div>
+        <p className={`text-xs ${Math.abs(macroKcal - parsed.calories) > parsed.calories * 0.1 ? 'text-amber-600 dark:text-amber-400' : 'muted'}`}>
+          Makros ergeben {macroKcal.toLocaleString('de-DE')} kcal · P {Math.round(split.protein * 100)} % · K{' '}
+          {Math.round(split.carbs * 100)} % · F {Math.round(split.fat * 100)} %
+        </p>
+        {field('water_ml', 'Wasser', 'ml')}
+        {dirty && (
+          <Button
+            className="w-full"
+            disabled={!valid}
+            loading={save.isPending}
+            onClick={() =>
+              save.mutate(parsed, {
+                onSuccess: () => showToast('Ziele gespeichert', 'success'),
+                onError: (err) => showToast(errorMessage(err), 'error'),
+              })
+            }
+          >
+            Ziele speichern
+          </Button>
+        )}
+      </div>
+      <CalculatorSheet
+        open={calcOpen}
+        onClose={() => setCalcOpen(false)}
+        onApply={(g) => {
+          setValues({
+            calories: String(g.calories),
+            protein_g: String(g.protein_g),
+            carbs_g: String(g.carbs_g),
+            fat_g: String(g.fat_g),
+            water_ml: String(g.water_ml),
+          });
+          setCalcOpen(false);
+          showToast('Werte übernommen – jetzt speichern', 'info');
+        }}
+      />
     </Card>
+  );
+}
+
+function CalculatorSheet({
+  open,
+  onClose,
+  onApply,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onApply: (g: ReturnType<typeof suggestGoals>) => void;
+}) {
+  const { data: latest } = useLatestWeight();
+  const [sex, setSex] = useState<Sex>('male');
+  const [age, setAge] = useState('25');
+  const [height, setHeight] = useState('180');
+  const [weight, setWeight] = useState('');
+  const [activity, setActivity] = useState<number>(1.55);
+  const [goal, setGoal] = useState<GoalType>('maintain');
+
+  useEffect(() => {
+    if (open && !weight && latest) setWeight(String(latest.kg));
+  }, [open, latest, weight]);
+
+  const n = (s: string) => Number(s.replace(',', '.')) || 0;
+  const ok = n(age) >= 14 && n(age) <= 100 && n(height) >= 120 && n(height) <= 230 && n(weight) >= 35 && n(weight) <= 300;
+  const result = ok
+    ? suggestGoals({ sex, age: n(age), heightCm: n(height), weightKg: n(weight), activity, goal })
+    : null;
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Bedarfsrechner">
+      <div className="space-y-4">
+        <Segmented
+          value={sex}
+          onChange={setSex}
+          options={[
+            { value: 'male', label: 'Männlich' },
+            { value: 'female', label: 'Weiblich' },
+          ]}
+        />
+        <div className="grid grid-cols-3 gap-2">
+          <Field label="Alter">
+            <Input value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" />
+          </Field>
+          <Field label="Größe (cm)">
+            <Input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" />
+          </Field>
+          <Field label="Gewicht (kg)">
+            <Input value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="decimal" />
+          </Field>
+        </div>
+        <Field label="Aktivität">
+          <Select value={activity} onChange={(e) => setActivity(Number(e.target.value))}>
+            {ACTIVITY_LEVELS.map((a) => (
+              <option key={a.factor} value={a.factor}>
+                {a.label} – {a.hint}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Segmented
+          value={goal}
+          onChange={setGoal}
+          options={[
+            { value: 'cut', label: 'Abnehmen' },
+            { value: 'maintain', label: 'Halten' },
+            { value: 'bulk', label: 'Aufbauen' },
+          ]}
+        />
+        {result && (
+          <div className="grid grid-cols-4 gap-2 rounded-2xl bg-surface-100 p-3 text-center dark:bg-white/[0.04]">
+            <div>
+              <p className="font-display text-lg font-bold num">{result.calories}</p>
+              <p className="text-[10px] muted">kcal</p>
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold text-protein num">{result.protein_g}</p>
+              <p className="text-[10px] muted">Protein</p>
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold text-carbs num">{result.carbs_g}</p>
+              <p className="text-[10px] muted">Kohlenh.</p>
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold text-fat num">{result.fat_g}</p>
+              <p className="text-[10px] muted">Fett</p>
+            </div>
+          </div>
+        )}
+        <p className="text-xs muted">
+          Schätzung nach Mifflin-St Jeor. Protein 2–2,2 g/kg, Fett 0,9 g/kg, Rest Kohlenhydrate.
+        </p>
+        <Button className="w-full" disabled={!result} onClick={() => result && onApply(result)}>
+          Übernehmen
+        </Button>
+      </div>
+    </Sheet>
   );
 }
 
 // ---------------------------------------------------------------- Darstellung
 function AppearanceSection() {
   const { theme, setTheme } = useTheme();
-  const options: { value: ThemePreference; label: string }[] = [
-    { value: 'system', label: 'System' },
-    { value: 'light', label: 'Hell' },
-    { value: 'dark', label: 'Dunkel' },
-  ];
   return (
     <Card>
-      <h2 className="text-base font-semibold">Darstellung</h2>
-      <div
-        role="radiogroup"
-        aria-label="Farbschema"
-        className="mt-3 grid grid-cols-3 gap-2"
-      >
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={theme === option.value}
-            onClick={() => setTheme(option.value)}
-            className={`touch-target rounded-2xl border px-3 py-2.5 text-sm font-medium transition-colors ${
-              theme === option.value
-                ? 'border-brand-600 bg-brand-50 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200'
-                : 'border-surface-200 text-surface-900/70 dark:border-surface-800 dark:text-surface-100/70'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-// ---------------------------------------------------------------- Benachrichtigungen
-function NotificationSection({ userId }: { userId: string }) {
-  const { data: prefs } = useNotificationPreferences();
-  const updatePrefs = useUpdateNotificationPreferences();
-  const testPush = useSendTestPush();
-  const { showToast } = useToast();
-  const [pushActive, setPushActive] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
-
-  useEffect(() => {
-    void hasActivePushSubscription().then(setPushActive);
-  }, []);
-
-  // Test-Push mit konkreter Diagnose statt Rätselraten
-  const runPushTest = async () => {
-    setTestResult(null);
-    try {
-      const result = await testPush.mutateAsync();
-      if (result.quiet) {
-        setTestResult(
-          'Ruhezeit aktiv – gerade werden keine Benachrichtigungen zugestellt. Passe unten die Ruhezeiten an und teste erneut.',
-        );
-      } else if (result.pushEnabled === false) {
-        setTestResult('Der „Web-Push“-Schalter oben ist aus – erst einschalten.');
-      } else if (result.subscriptions === -1) {
-        setTestResult(
-          'Auf dem Server fehlen die VAPID-Secrets (Supabase → Edge Functions → Secrets).',
-        );
-      } else if (result.subscriptions === 0) {
-        setTestResult(
-          'Kein Gerät registriert. Tippe oben bei „Dieses Gerät“ auf „Aktivieren“ (iPhone: App muss vom Home-Bildschirm geöffnet sein).',
-        );
-      } else if ((result.pushed ?? 0) > 0) {
-        setTestResult(null);
-        showToast(`Test-Push an ${result.pushed} Gerät(e) gesendet 🎉`, 'success');
-      } else {
-        const firstError = result.pushErrors?.[0];
-        if (firstError?.status === 403 || firstError?.status === 401) {
-          setTestResult(
-            'Die VAPID-Schlüssel passen nicht zusammen: Der Public Key im Frontend (Hostinger) gehört nicht zum Private Key in Supabase. Beide neu setzen, Push am Gerät deaktivieren und wieder aktivieren.',
-          );
-        } else {
-          setTestResult(
-            `Zustellung fehlgeschlagen${firstError ? `: ${firstError.status ?? ''} ${firstError.message}` : ' (Details in den send-push-Logs)'}`,
-          );
-        }
-      }
-    } catch (err) {
-      setTestResult(err instanceof Error ? err.message : 'Test fehlgeschlagen');
-    }
-  };
-
-  if (!prefs) return null;
-
-  const save = (update: Parameters<typeof updatePrefs.mutateAsync>[0]) => {
-    updatePrefs.mutateAsync(update).catch(() => {
-      showToast('Einstellung konnte nicht gespeichert werden', 'error');
-    });
-  };
-
-  const togglePushDevice = async () => {
-    setPushBusy(true);
-    try {
-      if (pushActive) {
-        await disablePush();
-        setPushActive(false);
-        showToast('Push auf diesem Gerät deaktiviert', 'info');
-      } else {
-        const result = await enablePush(userId);
-        if (result.ok) {
-          setPushActive(true);
-          showToast('Push aktiviert', 'success');
-        } else {
-          showToast(result.message, 'error');
-        }
-      }
-    } finally {
-      setPushBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      <h2 className="text-base font-semibold">Benachrichtigungen</h2>
-
-      <div className="mt-2 divide-y divide-surface-100 dark:divide-surface-800">
-        <Toggle
-          label="In-App"
-          description="Benachrichtigungen in der App anzeigen"
-          checked={prefs.in_app}
-          onChange={(v) => save({ in_app: v })}
-        />
-        <Toggle
-          label="Web-Push"
-          description="Mitteilungen auf deinen Geräten erhalten"
-          checked={prefs.push}
-          onChange={(v) => save({ push: v })}
-        />
-        <Toggle
-          label="E-Mail (Fallback)"
-          description="E-Mail, wenn kein Gerät erreichbar ist"
-          checked={prefs.email}
-          onChange={(v) => save({ email: v })}
-        />
-      </div>
-
-      {/* Gerätebezogenes Push-Abo */}
-      <div className="mt-3 rounded-2xl bg-surface-100 p-3 dark:bg-surface-800">
-        {iosNeedsInstallForPush() ? (
-          <div className="text-sm">
-            <p className="font-medium">Push auf dem iPhone/iPad aktivieren</p>
-            <p className="mt-1 text-surface-900/60 dark:text-surface-100/60">
-              Füge GymPact zuerst zum Home-Bildschirm hinzu: Tippe in Safari auf{' '}
-              <strong>Teilen</strong> → <strong>„Zum Home-Bildschirm“</strong>. Öffne die
-              App dann von dort und aktiviere Push hier erneut.
-            </p>
-          </div>
-        ) : pushSupported() ? (
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-sm">
-              <p className="font-medium">Dieses Gerät</p>
-              <p className="text-surface-900/60 dark:text-surface-100/60">
-                {pushActive ? 'Push ist aktiv' : 'Push ist nicht aktiviert'}
-              </p>
-            </div>
-            <Button
-              variant={pushActive ? 'secondary' : 'primary'}
-              loading={pushBusy}
-              onClick={() => void togglePushDevice()}
-              className="px-4 py-2 text-sm"
-            >
-              {pushActive ? 'Deaktivieren' : 'Aktivieren'}
-            </Button>
-          </div>
-        ) : (
-          <p className="text-sm text-surface-900/60 dark:text-surface-100/60">
-            Dieser Browser unterstützt kein Web-Push.
-          </p>
-        )}
-
-        {/* Test-Push mit Diagnose */}
-        {pushSupported() && !iosNeedsInstallForPush() && (
-          <div className="mt-3 border-t border-surface-200 pt-3 dark:border-surface-800">
-            <Button
-              variant="secondary"
-              className="w-full py-2 text-sm"
-              loading={testPush.isPending}
-              onClick={() => void runPushTest()}
-            >
-              Test-Push an dieses Konto senden
-            </Button>
-            {testResult && (
-              <p
-                role="alert"
-                className="mt-2 text-xs leading-relaxed text-amber-700 dark:text-amber-400"
-              >
-                {testResult}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Ruhezeiten */}
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold">Ruhezeiten</h3>
-        <p className="text-xs text-surface-900/50 dark:text-surface-100/50">
-          In dieser Zeit bekommst du keine Erinnerungen.
-        </p>
-        <div className="mt-2 grid grid-cols-2 gap-3">
-          <Field label="Von" htmlFor="quiet-start">
-            <Input
-              id="quiet-start"
-              type="time"
-              value={toTimeInputValue(prefs.quiet_hours_start)}
-              onChange={(e) => save({ quiet_hours_start: e.target.value })}
-            />
-          </Field>
-          <Field label="Bis" htmlFor="quiet-end">
-            <Input
-              id="quiet-end"
-              type="time"
-              value={toTimeInputValue(prefs.quiet_hours_end)}
-              onChange={(e) => save({ quiet_hours_end: e.target.value })}
-            />
-          </Field>
-        </div>
-      </div>
-
-      {/* Automatische Erinnerungen */}
-      <div className="mt-4">
-        <Toggle
-          label="Automatische Erinnerung"
-          description="Abendlicher Hinweis auf offene Gewohnheiten"
-          checked={prefs.auto_reminders}
-          onChange={(v) => save({ auto_reminders: v })}
-        />
-        {prefs.auto_reminders && (
-          <div className="mt-2">
-            <Field label="Uhrzeit" htmlFor="auto-time">
-              <Input
-                id="auto-time"
-                type="time"
-                value={toTimeInputValue(prefs.auto_reminder_time)}
-                onChange={(e) => save({ auto_reminder_time: e.target.value })}
-              />
-            </Field>
-          </div>
-        )}
-      </div>
+      <h2 className="mb-3 font-display text-lg font-bold">Darstellung</h2>
+      <Segmented<ThemePreference>
+        value={theme}
+        onChange={setTheme}
+        options={[
+          { value: 'dark', label: '🌙 Dunkel' },
+          { value: 'light', label: '☀️ Hell' },
+          { value: 'system', label: 'System' },
+        ]}
+      />
     </Card>
   );
 }

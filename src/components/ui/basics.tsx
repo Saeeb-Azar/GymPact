@@ -14,12 +14,12 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-600/50',
+    'bg-gradient-to-br from-brand-400 to-brand-600 text-surface-950 shadow-glow hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none',
   secondary:
-    'bg-surface-100 text-surface-900 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-100 dark:hover:bg-surface-850 border border-surface-200 dark:border-surface-800',
+    'bg-surface-100 text-surface-900 hover:bg-surface-200 dark:bg-white/[0.06] dark:text-surface-100 dark:hover:bg-white/10 border border-surface-200 dark:border-white/[0.06] active:scale-[0.98]',
   ghost:
-    'bg-transparent text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-surface-800',
-  danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50',
+    'bg-transparent text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-white/[0.06]',
+  danger: 'bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 active:scale-[0.98]',
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -32,7 +32,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`touch-target inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-base font-semibold transition-colors disabled:cursor-not-allowed ${buttonVariants[variant]} ${className}`}
+      className={`touch-target inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-base font-semibold transition-all duration-150 disabled:cursor-not-allowed ${buttonVariants[variant]} ${className}`}
       {...props}
     >
       {loading && <Spinner className="h-4 w-4" />}
@@ -43,8 +43,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = 'Button';
 
 // ---------------------------------------------------------------- Inputs
-const inputClasses =
-  'w-full rounded-2xl border border-surface-200 bg-white px-4 py-3 text-base text-surface-900 placeholder:text-surface-900/40 focus:border-brand-500 dark:border-surface-800 dark:bg-surface-850 dark:text-surface-100 dark:placeholder:text-surface-100/30';
+export const inputClasses =
+  'w-full rounded-2xl border border-surface-200 bg-white px-4 py-3 text-base text-surface-900 placeholder:text-surface-900/40 transition-colors focus:border-brand-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-surface-100 dark:placeholder:text-surface-100/30';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className = '', ...props }, ref) => (
@@ -131,7 +131,7 @@ export function Toggle({ checked, onChange, label, description, disabled }: Togg
       <span
         aria-hidden
         className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-          checked ? 'bg-brand-600' : 'bg-surface-200 dark:bg-surface-800'
+          checked ? 'bg-brand-500' : 'bg-surface-200 dark:bg-white/10'
         }`}
       >
         <span
@@ -184,8 +184,8 @@ export function Badge({
 }) {
   const tones = {
     neutral:
-      'bg-surface-100 text-surface-900/70 dark:bg-surface-800 dark:text-surface-100/70',
-    brand: 'bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200',
+      'bg-surface-100 text-surface-900/70 dark:bg-white/[0.06] dark:text-surface-100/70',
+    brand: 'bg-brand-100 text-brand-800 dark:bg-brand-500/15 dark:text-brand-300',
     warn: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200',
   };
   return (
@@ -201,14 +201,17 @@ export function EmptyState({
   title,
   description,
   action,
+  emoji,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  emoji?: string;
 }) {
   return (
     <div className="card flex flex-col items-center gap-3 px-6 py-10 text-center">
-      <h2 className="text-lg font-semibold">{title}</h2>
+      {emoji && <div className="animate-float text-5xl">{emoji}</div>}
+      <h2 className="font-display text-lg font-semibold">{title}</h2>
       {description && (
         <p className="max-w-sm text-sm text-surface-900/60 dark:text-surface-100/60">
           {description}
@@ -219,6 +222,35 @@ export function EmptyState({
   );
 }
 
-export function PageTitle({ children }: { children: ReactNode }) {
-  return <h1 className="text-2xl font-bold tracking-tight">{children}</h1>;
+export function PageTitle({
+  children,
+  eyebrow,
+  action,
+}: {
+  children: ReactNode;
+  eyebrow?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-3">
+      <div className="min-w-0">
+        {eyebrow && (
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600 dark:text-brand-400">
+            {eyebrow}
+          </p>
+        )}
+        <h1 className="font-display text-3xl font-bold tracking-tight">{children}</h1>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between px-1">
+      <h2 className="text-sm font-semibold uppercase tracking-[0.12em] muted">{children}</h2>
+      {action}
+    </div>
+  );
 }

@@ -77,7 +77,7 @@ export function LoginPage() {
         <p>
           <Link
             to="/forgot-password"
-            className="font-medium text-brand-700 hover:underline dark:text-brand-300"
+            className="font-medium text-brand-600 hover:underline dark:text-brand-400"
           >
             Passwort vergessen?
           </Link>
@@ -86,7 +86,7 @@ export function LoginPage() {
           Noch kein Konto?{' '}
           <Link
             to={`/register${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
-            className="font-medium text-brand-700 hover:underline dark:text-brand-300"
+            className="font-medium text-brand-600 hover:underline dark:text-brand-400"
           >
             Registrieren
           </Link>

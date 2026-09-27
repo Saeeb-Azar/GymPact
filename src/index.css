@@ -20,11 +20,24 @@
   }
 
   body {
-    @apply bg-surface-50 text-surface-900 antialiased dark:bg-surface-950 dark:text-surface-100;
+    @apply bg-surface-50 font-sans text-surface-900 antialiased dark:bg-surface-950 dark:text-surface-100;
     overscroll-behavior-y: none;
+    font-feature-settings: 'cv11', 'ss01';
   }
 
-  /* Ruhigere Fokus-Ringe, aber klar sichtbar (Barrierefreiheit) */
+  /* Weiche Farbflächen im Hintergrund – geben der App Tiefe */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: -20vh -20vw auto;
+    height: 70vh;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(40% 50% at 20% 20%, rgba(15, 203, 132, 0.16), transparent 70%),
+      radial-gradient(35% 45% at 85% 10%, rgba(139, 92, 246, 0.14), transparent 70%);
+  }
+
   :focus-visible {
     @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface-50 dark:ring-offset-surface-950;
   }
@@ -52,10 +65,43 @@
 
 @layer components {
   .card {
-    @apply rounded-card bg-white shadow-card dark:bg-surface-850;
+    @apply rounded-card border border-surface-200/70 bg-white/80 shadow-card backdrop-blur-xl dark:border-white/[0.06] dark:bg-surface-850/80 dark:shadow-none;
+  }
+
+  .glass {
+    @apply border border-white/40 bg-white/70 backdrop-blur-2xl dark:border-white/[0.07] dark:bg-surface-900/70;
   }
 
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
+  }
+
+  .muted {
+    @apply text-surface-900/55 dark:text-surface-100/55;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-400 via-emerald-300 to-violet-400 bg-clip-text text-transparent;
+  }
+
+  .skeleton {
+    @apply animate-shimmer rounded-xl bg-[length:200%_100%];
+    background-image: linear-gradient(
+      90deg,
+      rgba(127, 127, 140, 0.08) 0%,
+      rgba(127, 127, 140, 0.18) 50%,
+      rgba(127, 127, 140, 0.08) 100%
+    );
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

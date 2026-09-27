@@ -12,6 +12,8 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    // Das 3D-Körpermodell (three.js) wird separat und erst bei Bedarf geladen.
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -19,6 +21,7 @@ export default defineConfig({
           supabase: ['@supabase/supabase-js'],
           data: ['@tanstack/react-query'],
           forms: ['react-hook-form', 'zod', '@hookform/resolvers/zod'],
+          motion: ['framer-motion'],
         },
       },
     },

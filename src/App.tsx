@@ -5,13 +5,12 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
-import { TodayPage } from './pages/TodayPage';
-import { GroupPage } from './pages/GroupPage';
-import { NewChallengePage } from './pages/NewChallengePage';
-import { ProgressPage } from './pages/ProgressPage';
+import { HomePage } from './pages/HomePage';
+import { NutritionPage } from './pages/NutritionPage';
+import { TrainingPage } from './pages/TrainingPage';
+import { WorkoutPage } from './pages/WorkoutPage';
+import { StatsPage } from './pages/StatsPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { NotificationsPage } from './pages/NotificationsPage';
-import { JoinPage } from './pages/JoinPage';
 import { AdminPage } from './pages/AdminPage';
 
 export default function App() {
@@ -25,16 +24,13 @@ export default function App() {
 
       {/* Geschützte Routen */}
       <Route element={<RequireAuth />}>
-        {/* Einladung annehmen (ohne App-Shell) */}
-        <Route path="/join/:code" element={<JoinPage />} />
-
         <Route element={<AppLayout />}>
-          <Route path="/" element={<TodayPage />} />
-          <Route path="/group" element={<GroupPage />} />
-          <Route path="/group/new-challenge" element={<NewChallengePage />} />
-          <Route path="/progress" element={<ProgressPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/nutrition" element={<NutritionPage />} />
+          <Route path="/training" element={<TrainingPage />} />
+          <Route path="/training/workout/:id" element={<WorkoutPage />} />
+          <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Route>
       </Route>

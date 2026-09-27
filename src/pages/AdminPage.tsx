@@ -1,197 +1,112 @@
-// App-weiter Admin-Bereich: Übersicht über alle Gruppen, Challenges und
-// registrierte Nutzer. Zugriff nur für Nutzer in public.app_admins
-// (manuell im SQL-Editor vergeben, siehe README).
-//
-// Bewusst NICHT einsehbar: private Check-ins, Notizen, Gewicht,
-// Erinnerungen, Benachrichtigungen oder Push-Abos anderer Nutzer –
-// GymPact bleibt eine private App, kein Überwachungstool.
+import { motion } from 'framer-motion';
+import { Link, Navigate } from 'react-router-dom';
+import { errorMessage, useAdminUserOverview, useIsAdmin } from '@/hooks/queries';
+import { formatRelativeTime } from '@/lib/dates';
+import { Avatar } from '@/components/ui/Avatar';
+import { Badge, PageTitle, Spinner } from '@/components/ui/basics';
+import { AnimatedNumber } from '@/components/ui/motion';
+import { IconChevronLeft } from '@/components/icons';
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  useAdminDeleteGroup,
-  useAdminOverview,
-  useAdminUserCount,
-  useIsAdmin,
-} from '@/hooks/queries';
-import { formatDate } from '@/lib/dates';
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  PageTitle,
-  Spinner,
-} from '@/components/ui/basics';
-import { useToast } from '@/components/ui/toast';
-import { IconChevronLeft, IconTrash } from '@/components/icons';
-
+/** App-weite Übersicht für Admins: Nutzer und Aktivität (nur Zählwerte). */
 export function AdminPage() {
-  const navigate = useNavigate();
   const isAdmin = useIsAdmin();
+  const { data: users = [], isLoading, error } = useAdminUserOverview(isAdmin === true);
 
   if (isAdmin === undefined) {
     return (
       <div className="flex justify-center py-20">
-        <Spinner className="h-8 w-8 text-brand-600" />
+        <Spinner className="h-8 w-8 text-brand-500" />
       </div>
     );
   }
+  if (!isAdmin) return <Navigate to="/" replace />;
 
-  if (!isAdmin) {
-    return (
-      <EmptyState
-        title="Kein Zugriff"
-        description="Dieser Bereich ist nur für App-Admins sichtbar."
-        action={
-          <Button variant="secondary" onClick={() => navigate('/')}>
-            Zurück zu „Heute“
-          </Button>
-        }
-      />
-    );
-  }
+  const totals = users.reduce(
+    (acc, u) => ({
+      entries: acc.entries + Number(u.food_entries),
+      workouts: acc.workouts + Number(u.workouts_done),
+    }),
+    { entries: 0, workouts: 0 },
+  );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <Link to="/settings" className="-ml-1 inline-flex items-center gap-1 text-sm font-medium muted">
+        <IconChevronLeft size={18} /> Einstellungen
+      </Link>
+      <PageTitle eyebrow="Admin">Nutzer</PageTitle>
+
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: 'Nutzer', value: users.length },
+          { label: 'Essens-Einträge', value: totals.entries },
+          { label: 'Workouts', value: totals.workouts },
+        ].map((k) => (
+          <div key={k.label} className="card p-3">
+            <p className="text-[11px] muted">{k.label}</p>
+            <p className="font-display text-xl font-bold">
+              <AnimatedNumber value={k.value} />
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {error && <p className="card p-4 text-sm text-rose-500">{errorMessage(error)}</p>}
+      {isLoading && <div className="skeleton h-40" />}
+
+      <div className="space-y-3">
+        {users.map((u, i) => (
+          <motion.div
+            key={u.user_id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="card p-4"
+          >
+            <div className="flex items-center gap-3">
+              <Avatar name={u.display_name || '?'} avatarUrl={u.avatar_url} size={44} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate font-semibold">{u.display_name || 'Ohne Namen'}</p>
+                  {u.is_admin && <Badge tone="brand">Admin</Badge>}
+                </div>
+                <p className="text-xs muted">
+                  {u.last_activity ? `Aktiv ${formatRelativeTime(u.last_activity)}` : 'Noch keine Aktivität'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl bg-surface-100 py-2 dark:bg-white/[0.04]">
+                <p className="font-display font-bold num">{u.food_days}</p>
+                <p className="text-[10px] muted">Tage getrackt</p>
+              </div>
+              <div className="rounded-xl bg-surface-100 py-2 dark:bg-white/[0.04]">
+                <p className="font-display font-bold num">{u.training_weeks}</p>
+                <p className="text-[10px] muted">Trainingswochen</p>
+              </div>
+              <div className="rounded-xl bg-surface-100 py-2 dark:bg-white/[0.04]">
+                <p className="font-display font-bold num">{u.workouts_done}</p>
+                <p className="text-[10px] muted">Workouts</p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="card space-y-2 p-4 text-sm">
+        <p className="font-semibold">Weitere Nutzer einladen</p>
+        <p className="muted">
+          Schick den Link zur App – neue Nutzer registrieren sich selbst unter <span className="font-mono">/register</span>.
+          Jeder sieht nur seine eigenen Daten; du siehst hier nur Zählwerte, keine Inhalte.
+        </p>
         <button
           type="button"
-          onClick={() => navigate('/settings')}
-          aria-label="Zurück"
-          className="touch-target flex items-center justify-center rounded-full text-surface-900/60 hover:bg-surface-100 dark:text-surface-100/60 dark:hover:bg-surface-800"
+          className="font-semibold text-brand-600 dark:text-brand-400"
+          onClick={() => void navigator.clipboard?.writeText(`${window.location.origin}/register`)}
         >
-          <IconChevronLeft size={22} />
+          Registrierungslink kopieren
         </button>
-        <PageTitle>Admin</PageTitle>
       </div>
-
-      <AdminStats />
-      <AdminGroupList />
     </div>
-  );
-}
-
-function AdminStats() {
-  const { data: userCount } = useAdminUserCount();
-  const { data: groups } = useAdminOverview();
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <Card className="py-3 text-center">
-        <div className="text-2xl font-bold tabular-nums">{userCount ?? '–'}</div>
-        <div className="mt-0.5 text-xs text-surface-900/50 dark:text-surface-100/50">
-          Registrierte Nutzer
-        </div>
-      </Card>
-      <Card className="py-3 text-center">
-        <div className="text-2xl font-bold tabular-nums">{groups?.length ?? '–'}</div>
-        <div className="mt-0.5 text-xs text-surface-900/50 dark:text-surface-100/50">
-          Gruppen
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function AdminGroupList() {
-  const { data: groups, isLoading } = useAdminOverview();
-  const deleteGroup = useAdminDeleteGroup();
-  const { showToast } = useToast();
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Spinner className="h-6 w-6 text-brand-600" />
-      </div>
-    );
-  }
-
-  if (!groups || groups.length === 0) {
-    return <EmptyState title="Noch keine Gruppen" description="Es wurde noch keine Gruppe erstellt." />;
-  }
-
-  return (
-    <Card>
-      <h2 className="text-base font-semibold">Alle Gruppen</h2>
-      <ul className="mt-3 divide-y divide-surface-100 dark:divide-surface-800">
-        {groups.map((group) => {
-          const owner = group.group_members.find((m) => m.role === 'owner');
-          const activeChallenge = group.challenges.find((c) => c.status === 'active');
-          return (
-            <li key={group.id} className="py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{group.name}</p>
-                  <p className="mt-0.5 text-xs text-surface-900/50 dark:text-surface-100/50">
-                    Owner: {owner?.profiles.display_name ?? 'unbekannt'} ·{' '}
-                    {group.group_members.length}{' '}
-                    {group.group_members.length === 1 ? 'Mitglied' : 'Mitglieder'} ·
-                    Code {group.invite_code}
-                  </p>
-                  <p className="mt-0.5 text-xs text-surface-900/40 dark:text-surface-100/40">
-                    Erstellt am {formatDate(group.created_at.slice(0, 10), true)}
-                  </p>
-                  {activeChallenge ? (
-                    <p className="mt-1.5 text-sm">
-                      <Badge tone="brand">Aktive Challenge</Badge>{' '}
-                      <span className="text-surface-900/70 dark:text-surface-100/70">
-                        {activeChallenge.name}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="mt-1.5">
-                      <Badge>Keine aktive Challenge</Badge>
-                    </p>
-                  )}
-                </div>
-
-                {confirmId === group.id ? (
-                  <div className="flex shrink-0 flex-col gap-1.5">
-                    <Button
-                      variant="danger"
-                      className="px-3 py-1.5 text-xs"
-                      loading={deleteGroup.isPending}
-                      onClick={async () => {
-                        try {
-                          await deleteGroup.mutateAsync(group.id);
-                          showToast(`„${group.name}“ gelöscht`, 'info');
-                        } catch (err) {
-                          showToast(
-                            err instanceof Error ? err.message : 'Löschen fehlgeschlagen',
-                            'error',
-                          );
-                        } finally {
-                          setConfirmId(null);
-                        }
-                      }}
-                    >
-                      Wirklich löschen
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="px-3 py-1.5 text-xs"
-                      onClick={() => setConfirmId(null)}
-                    >
-                      Abbrechen
-                    </Button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmId(group.id)}
-                    aria-label={`Gruppe „${group.name}“ löschen`}
-                    className="touch-target flex shrink-0 items-center justify-center rounded-full text-surface-900/40 hover:text-red-600 dark:text-surface-100/40"
-                  >
-                    <IconTrash size={18} />
-                  </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
   );
 }
