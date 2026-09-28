@@ -18,12 +18,13 @@ gemeinsam verwenden; jeder sieht ausschließlich seine eigenen Daten.
   Sätze mit Gewicht und Wiederholungen. „Vorwoche übernehmen“ kopiert den
   kompletten Plan inkl. Gewichten; jede Übung zeigt „Letztes Mal“, erkennt
   neue Bestleistungen (PR) und schätzt das 1RM.
-  **Körper 3D**: realistische anatomische Illustration (Vorder-/Rückseite,
-  Mann/Frau) mit anklickbaren Muskeln – wischen dreht die Figur in 3D,
-  ein Muskel antippen → Figur dreht sich zur richtigen Seite, zoomt auf den
-  Muskel, er pulsiert rot und daneben erscheinen deine Übungen dafür.
-  Grün eingefärbt = viel trainiert (4 Wochen). Illustrationen & Masken:
-  [js-rich-body-highlighter](https://github.com/crmapache/js-rich-body-highlighter) (MIT).
+  **Körper**: echtes 3D-Modell (three.js, MakeHuman-Mesh CC0) mit Volumen,
+  360° drehbar per Finger, Mann/Frau mit fließendem Übergang. Muskel antippen
+  → Figur dreht sich zur richtigen Seite, Kamera zoomt, der Muskel pulsiert rot
+  und daneben erscheinen deine Übungen dafür. Grün = viel trainiert (4 Wochen).
+  Modell neu erzeugen: `node scripts/build-body-model.mjs <ordner>` (siehe Skript).
+  Ohne WebGL fällt die Ansicht auf eine anatomische Illustration zurück
+  ([js-rich-body-highlighter](https://github.com/crmapache/js-rich-body-highlighter), MIT).
 - **Statistik** – Ernährung (3D-Balken Kalorien, Proteinverlauf,
   3D-Makro-Donut, Mahlzeiten, Tracking-Kalender), Training (Volumen je
   Woche, Kraftentwicklung je Übung, Bestleistungen, Muskelgruppen,

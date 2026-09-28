@@ -1,5 +1,5 @@
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import type { BodyView as Side, Gender } from 'js-rich-body-highlighter';
 import { useNavigate } from 'react-router-dom';
 import type { MuscleGroup } from '@/lib/database.types';
@@ -10,6 +10,17 @@ import { useTrainingHistory } from '@/hooks/training';
 import { IconChevronRight, IconX } from '../icons';
 import { Segmented } from '../ui/motion';
 import { RealisticBody, groupsInView } from './RealisticBody';
+
+const Body3D = lazy(() => import('./Body3D'));
+
+function webglAvailable(): boolean {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
 const GENDER_KEY = 'gympact-body-gender';
 
@@ -60,10 +71,11 @@ export function BodyView({ today }: { today: DateString }) {
     }
   };
   const dark = useIsDark();
+  const [use3d, setUse3d] = useState(webglAvailable);
 
   const select = (m: MuscleGroup | null) => {
     setSelected(m);
-    if (m && !groupsInView(gender, side).has(m)) setSide(side === 'front' ? 'back' : 'front');
+    if (m && !use3d && !groupsInView(gender, side).has(m)) setSide(side === 'front' ? 'back' : 'front');
     if (m) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const from = addDays(startOfWeek(today), -7 * 25);
@@ -166,16 +178,31 @@ export function BodyView({ today }: { today: DateString }) {
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_42%,rgba(15,203,132,0.16),transparent_70%)]"
           />
           <div className="relative w-full" style={{ aspectRatio: '361.16 / 541.87' }}>
-            <RealisticBody
-              gender={gender}
-              view={side}
-              onViewChange={setSide}
-              heat={heat}
-              selected={selected}
-              onSelect={select}
-              onHover={setHovered}
-              dark={dark}
-            />
+            {use3d ? (
+              <Suspense fallback={<div className="skeleton absolute inset-3" />}>
+                <Body3D
+                  heat={heat}
+                  selected={selected}
+                  onSelect={select}
+                  onHover={setHovered}
+                  female={gender === 'female'}
+                  side={side}
+                  dark={dark}
+                  onFail={() => setUse3d(false)}
+                />
+              </Suspense>
+            ) : (
+              <RealisticBody
+                gender={gender}
+                view={side}
+                onViewChange={setSide}
+                heat={heat}
+                selected={selected}
+                onSelect={select}
+                onHover={setHovered}
+                dark={dark}
+              />
+            )}
           </div>
           {selected && (
             <button
@@ -194,7 +221,7 @@ export function BodyView({ today }: { today: DateString }) {
             <p className="min-h-[24px] font-display text-base font-bold">
               {hovered ? MUSCLE_BY_ID[hovered].label : 'Tippe auf einen Muskel'}
             </p>
-            <p className="text-xs muted">Wischen zum Drehen · Grün = viel trainiert (4 Wochen)</p>
+            <p className="text-xs muted">{use3d ? '360° drehen mit dem Finger' : 'Wischen zum Drehen'} · Grün = viel trainiert (4 Wochen)</p>
           </div>
         )}
 

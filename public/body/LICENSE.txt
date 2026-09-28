@@ -1,0 +1,1 @@
+Körpermodell: MakeHuman (https://github.com/makehumancommunity/makehuman), CC0 1.0 – Basismesh, Targets und Gewichte.

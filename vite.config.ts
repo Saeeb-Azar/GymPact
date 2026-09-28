@@ -17,6 +17,8 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    // three.js für den 3D-Körper wird separat und erst bei Bedarf geladen.
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
