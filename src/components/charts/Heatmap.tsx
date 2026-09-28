@@ -10,7 +10,7 @@ export function Heatmap({
   from,
   to,
   values,
-  color = '#0fcb84',
+  color = '#4d9e73',
   describe,
 }: {
   from: DateString;

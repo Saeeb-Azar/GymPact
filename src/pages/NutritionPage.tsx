@@ -86,7 +86,7 @@ export function NutritionPage() {
                   type="button"
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setAddMeal(meal.id)}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-300 to-brand-500 text-surface-950 shadow-glow"
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950"
                   aria-label={`${meal.label}: Essen hinzufügen`}
                 >
                   <IconPlus size={22} strokeWidth={2.4} />

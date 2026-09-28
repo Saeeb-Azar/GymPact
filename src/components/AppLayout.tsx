@@ -34,7 +34,7 @@ export function AppLayout() {
         style={{ paddingTop: 'calc(var(--safe-top) + 0.75rem)' }}
       >
         <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-300 to-brand-600 text-surface-950 shadow-glow">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950">
             <IconDumbbell size={18} strokeWidth={2.4} />
           </span>
           <span className="font-display text-lg font-bold tracking-tight">GymPact</span>
@@ -71,13 +71,13 @@ export function AppLayout() {
                 key={to}
                 to={to}
                 className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] font-semibold transition-colors ${
-                  active ? 'text-surface-950' : 'muted hover:text-surface-900 dark:hover:text-surface-100'
+                  active ? 'text-white dark:text-surface-950' : 'muted hover:text-surface-900 dark:hover:text-surface-100'
                 }`}
               >
                 {active && (
                   <motion.span
                     layoutId="nav-pill"
-                    className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-300 to-brand-500 shadow-glow"
+                    className="absolute inset-0 rounded-2xl bg-brand-600 dark:bg-brand-500"
                     transition={{ type: 'spring', stiffness: 500, damping: 36 }}
                   />
                 )}

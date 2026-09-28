@@ -25,17 +25,20 @@
     font-feature-settings: 'cv11', 'ss01';
   }
 
-  /* Weiche Farbflächen im Hintergrund – geben der App Tiefe */
+  /* Ein einziger, kaum wahrnehmbarer warmer Schimmer oben – gibt Tiefe,
+     ohne zu leuchten. */
   body::before {
     content: '';
     position: fixed;
     inset: -20vh -20vw auto;
-    height: 70vh;
+    height: 55vh;
     pointer-events: none;
     z-index: -1;
-    background:
-      radial-gradient(40% 50% at 20% 20%, rgba(15, 203, 132, 0.16), transparent 70%),
-      radial-gradient(35% 45% at 85% 10%, rgba(139, 92, 246, 0.14), transparent 70%);
+    background: radial-gradient(
+      50% 55% at 50% 0%,
+      rgba(77, 158, 115, 0.06),
+      transparent 70%
+    );
   }
 
   :focus-visible {
@@ -84,8 +87,9 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Früher ein Neon-Verlauf – jetzt ein ruhiger Akzentton. */
   .text-gradient {
-    @apply bg-gradient-to-r from-brand-400 via-emerald-300 to-violet-400 bg-clip-text text-transparent;
+    @apply bg-none text-brand-600 dark:text-brand-400;
   }
 
   .skeleton {

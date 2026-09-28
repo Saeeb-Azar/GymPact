@@ -41,7 +41,7 @@ export function groupsInView(gender: Gender, view: BodyView): Set<MuscleGroup> {
 }
 
 const SELECT = '#f43f5e';
-const HEAT = '#0fcb84';
+const HEAT = '#4d9e73';
 
 export function RealisticBody({
   gender,

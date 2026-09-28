@@ -14,7 +14,7 @@ export interface LinePoint {
 /** Linien-/Flächendiagramm mit Fadenkreuz-Tooltip und animiertem Zeichnen. */
 export function LineChart({
   data,
-  color = '#0fcb84',
+  color = '#4d9e73',
   unit = '',
   goal,
   height = 170,
@@ -142,7 +142,7 @@ export function LineChart({
             x2={w - padR}
             y1={y(goal)}
             y2={y(goal)}
-            stroke="#8b5cf6"
+            stroke="#7a7fd1"
             strokeWidth={1.5}
             strokeDasharray="5 4"
           />

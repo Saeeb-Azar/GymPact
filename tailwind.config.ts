@@ -6,37 +6,40 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Neon-Mint als Markenfarbe – leuchtet auf dunklem Grund.
+        // Gedämpftes Salbeigrün – ruhig statt Neon, angenehm auf hellem
+        // wie dunklem Grund (Palette rechnerisch auf Kontrast und
+        // Farbenblind-Tauglichkeit geprüft).
         brand: {
-          50: '#ecfff6',
-          100: '#d1ffe9',
-          200: '#a6fcd5',
-          300: '#6cf2bb',
-          400: '#2ee39d',
-          500: '#0fcb84',
-          600: '#05a56b',
-          700: '#07835a',
-          800: '#0b674a',
-          900: '#0b553f',
-          950: '#013023',
+          50: '#f2f8f4',
+          100: '#e0efe6',
+          200: '#c3ddcf',
+          300: '#9cc5ae',
+          400: '#6fab8b',
+          500: '#4d9e73',
+          600: '#3d8460',
+          700: '#326b50',
+          800: '#2a5541',
+          900: '#234536',
+          950: '#122a20',
         },
+        // Warme Grautöne statt kühlem Blau-Schwarz – weniger hart für die Augen.
         surface: {
-          50: '#f4f5f8',
-          100: '#eceef3',
-          200: '#dfe2ea',
-          300: '#c5cad6',
-          700: '#2a2d37',
-          800: '#1f2129',
-          850: '#16181f',
-          900: '#111318',
-          950: '#0a0b0f',
+          50: '#f7f6f4',
+          100: '#efeeea',
+          200: '#e2e0da',
+          300: '#c9c6bf',
+          700: '#34322e',
+          800: '#242320',
+          850: '#1c1b18',
+          900: '#151412',
+          950: '#0e0d0b',
         },
-        // Makro-Farben – überall gleich verwendet.
-        protein: '#8b5cf6',
-        carbs: '#d97706',
-        fat: '#ec4899',
-        kcal: '#0fcb84',
-        water: '#38bdf8',
+        // Makro-Farben – überall gleich verwendet, gedeckt statt knallig.
+        protein: '#7a7fd1',
+        carbs: '#a3762a',
+        fat: '#c9557e',
+        kcal: '#4d9e73',
+        water: '#3d92d4',
       },
       fontFamily: {
         sans: [
@@ -55,8 +58,9 @@ export default {
         card: '1.5rem',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(10, 12, 20, 0.04), 0 8px 24px rgba(10, 12, 20, 0.06)',
-        glow: '0 0 0 1px rgba(15, 203, 132, 0.25), 0 8px 32px rgba(15, 203, 132, 0.35)',
+        card: '0 1px 2px rgba(20, 18, 12, 0.04), 0 8px 24px rgba(20, 18, 12, 0.06)',
+        // Früher Neon-Glow – jetzt eine ruhige, weiche Erhebung.
+        glow: '0 1px 2px rgba(20, 18, 12, 0.08), 0 6px 20px rgba(20, 18, 12, 0.12)',
       },
       keyframes: {
         'fade-up': {

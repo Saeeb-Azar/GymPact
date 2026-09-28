@@ -175,7 +175,7 @@ export function BodyView({ today }: { today: DateString }) {
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_42%,rgba(15,203,132,0.16),transparent_70%)]"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_45%_at_50%_42%,rgba(77,158,115,0.10),transparent_70%)]"
           />
           <div className="relative w-full" style={{ aspectRatio: '361.16 / 541.87' }}>
             {use3d ? (

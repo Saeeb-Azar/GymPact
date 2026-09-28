@@ -81,7 +81,7 @@ export function AddWorkoutSheet({
                 }}
                 className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                   template === t.name
-                    ? 'bg-gradient-to-br from-brand-300 to-brand-500 text-surface-950'
+                    ? 'bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950'
                     : 'bg-surface-100 dark:bg-white/[0.06]'
                 }`}
               >
