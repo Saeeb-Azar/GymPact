@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
 import { loginSchema, type LoginValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
+import { GoogleButton, OrDivider } from './GoogleButton';
 import { friendlyNetworkMessage } from '@/lib/netError';
 import { Button, Field, Input } from '@/components/ui/basics';
 
@@ -43,6 +44,8 @@ export function LoginPage() {
 
   return (
     <AuthLayout title="Anmelden" subtitle="Willkommen zurück!">
+      <GoogleButton redirect={redirect} />
+      <OrDivider />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <Field label="E-Mail" htmlFor="email" error={errors.email?.message}>
           <Input

@@ -56,6 +56,18 @@ Branch **`hostinger-build`**. In Hostinger unter *Website → Erweitert → Git*
 dieses Repo mit Branch `hostinger-build` und Ordner `public_html` verbinden
 und „Automatisches Deployment“ aktivieren.
 
+### Google-Login einschalten (optional)
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → Projekt anlegen →
+   *APIs & Dienste → OAuth-Zustimmungsbildschirm* (Extern, App-Name, E-Mail) →
+   *Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID* → Typ **Webanwendung**.
+2. Bei *Autorisierte Weiterleitungs-URIs* eintragen:
+   `https://<projekt-ref>.supabase.co/auth/v1/callback`
+3. Client-ID + Clientschlüssel in Supabase unter *Authentication → Providers → Google*
+   eintragen (oder als Secrets `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, dann macht es
+   der Workflow – braucht zusätzlich `SUPABASE_ACCESS_TOKEN`).
+4. In `.env.production` `VITE_GOOGLE_LOGIN=true` setzen → Button erscheint.
+
 Der **erste Nutzer**, der sich registriert, wird automatisch Admin
 (Migration `0010_first_admin.sql`).
 

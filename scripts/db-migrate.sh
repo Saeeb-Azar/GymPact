@@ -26,6 +26,7 @@ if [ "$count" = "0" ]; then
   has_base=$("${PSQL[@]}" -c "select to_regclass('public.profiles') is not null")
   has_tracker=$("${PSQL[@]}" -c "select to_regclass('public.food_entries') is not null")
   has_first_admin=$("${PSQL[@]}" -c "select exists (select 1 from pg_trigger where tgname = 'trg_first_user_admin')")
+  has_oauth=$("${PSQL[@]}" -c "select exists (select 1 from pg_proc where proname = 'handle_new_user' and prosrc like '%full_name%')")
   for f in supabase/migrations/*.sql; do
     name=$(basename "$f")
     mark=false
@@ -33,6 +34,7 @@ if [ "$count" = "0" ]; then
       000[1-8]_*) [ "$has_base" = "t" ] && mark=true ;;
       0009_*) [ "$has_tracker" = "t" ] && mark=true ;;
       0010_*) [ "$has_first_admin" = "t" ] && mark=true ;;
+      0011_*) [ "$has_oauth" = "t" ] && mark=true ;;
     esac
     if $mark; then
       "${PSQL[@]}" -c "insert into gympact_meta.migrations (name) values ('$name') on conflict do nothing"

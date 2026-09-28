@@ -63,16 +63,29 @@ jobs:
           fi
           scripts/db-migrate.sh
 
-      - name: Supabase-Auth konfigurieren (Website-URL, keine Bestätigungsmail)
+      - name: Supabase-Auth konfigurieren (Website-URL, Google-Login, keine Bestätigungsmail)
         if: env.SUPABASE_ACCESS_TOKEN != ''
         continue-on-error: true
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
           REF=$(grep '^VITE_SUPABASE_URL=' .env.production | sed -E 's#.*https://([^.]+)\..*#\1#')
+          BODY=$(python3 - <<'PY'
+          import json, os
+          site = os.environ["SITE_URL"].rstrip("/")
+          body = {"site_url": site, "uri_allow_list": f"{site}/**", "mailer_autoconfirm": True}
+          if os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"):
+              body.update(external_google_enabled=True,
+                          external_google_client_id=os.environ["GOOGLE_CLIENT_ID"],
+                          external_google_secret=os.environ["GOOGLE_CLIENT_SECRET"])
+          print(json.dumps(body))
+          PY
+          )
           curl -fsS -X PATCH "https://api.supabase.com/v1/projects/$REF/config/auth" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"site_url\":\"$SITE_URL\",\"uri_allow_list\":\"$SITE_URL/**\",\"mailer_autoconfirm\":true}" \
-            -o /dev/null && echo "Auth-Einstellungen gesetzt für $REF"
+            -d "$BODY" -o /dev/null && echo "Auth-Einstellungen gesetzt für $REF"
 
       - name: Website in Branch "hostinger-build" veröffentlichen
         uses: peaceiris/actions-gh-pages@v4

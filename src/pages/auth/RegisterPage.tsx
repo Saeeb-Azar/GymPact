@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthProvider';
 import { registerSchema, type RegisterValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
+import { GoogleButton, OrDivider } from './GoogleButton';
 import { friendlyNetworkMessage } from '@/lib/netError';
 import { Button, Field, Input } from '@/components/ui/basics';
 
@@ -68,12 +69,14 @@ export function RegisterPage() {
 
   return (
     <AuthLayout title="Konto erstellen" subtitle="In einer Minute startklar.">
+      <GoogleButton redirect={redirect} />
+      <OrDivider />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <Field
           label="Anzeigename"
           htmlFor="displayName"
           error={errors.displayName?.message}
-          hint="So sehen dich deine Gruppenmitglieder."
+          hint="So wirst du in der App angezeigt."
         >
           <Input
             id="displayName"
