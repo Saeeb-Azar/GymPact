@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthProvider';
 import { updatePasswordSchema, type UpdatePasswordValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
 import { friendlyNetworkMessage } from '@/lib/netError';
+import { storeCredential } from '@/lib/credentials';
 import { Button, Field, Input } from '@/components/ui/basics';
 
 /**
@@ -32,6 +33,7 @@ export function ResetPasswordPage() {
       setServerError(friendlyNetworkMessage(error.message));
       return;
     }
+    if (session?.user.email) await storeCredential(session.user.email, values.password);
     navigate('/', { replace: true });
   };
 
@@ -52,7 +54,16 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout title="Neues Passwort" subtitle="Wähle ein sicheres neues Passwort.">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" method="post" action="/reset-password" noValidate>
+        {/* Für Passwort-Manager: zu welchem Konto das neue Passwort gehört */}
+        <input
+          type="email"
+          name="username"
+          autoComplete="username"
+          value={session?.user.email ?? ''}
+          readOnly
+          hidden
+        />
         <Field label="Neues Passwort" htmlFor="password" error={errors.password?.message}>
           <Input
             id="password"

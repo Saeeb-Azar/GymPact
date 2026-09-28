@@ -8,6 +8,7 @@ import { registerSchema, type RegisterValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
 import { GoogleButton, OrDivider } from './GoogleButton';
 import { friendlyNetworkMessage } from '@/lib/netError';
+import { storeCredential } from '@/lib/credentials';
 import { Button, Field, Input } from '@/components/ui/basics';
 
 export function RegisterPage() {
@@ -44,6 +45,7 @@ export function RegisterPage() {
       );
       return;
     }
+    await storeCredential(values.email.trim(), values.password, values.displayName);
     if (!data.session) {
       // E-Mail-Bestätigung ist im Supabase-Projekt aktiviert
       setAwaitConfirmation(true);
@@ -71,7 +73,7 @@ export function RegisterPage() {
     <AuthLayout title="Konto erstellen" subtitle="In einer Minute startklar.">
       <GoogleButton redirect={redirect} />
       <OrDivider />
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" method="post" action="/register" noValidate>
         <Field
           label="Anzeigename"
           htmlFor="displayName"
@@ -89,7 +91,10 @@ export function RegisterPage() {
           <Input
             id="email"
             type="email"
-            autoComplete="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="email"
             placeholder="du@example.com"
             {...register('email')}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
@@ -11,16 +11,20 @@ import { Button, Field, Input } from '@/components/ui/basics';
 export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [params] = useSearchParams();
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<ForgotPasswordValues>({ resolver: zodResolver(forgotPasswordSchema) });
+  } = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: params.get('email') ?? '' },
+  });
 
   const onSubmit = async (values: ForgotPasswordValues) => {
     setServerError(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) {
@@ -34,7 +38,7 @@ export function ForgotPasswordPage() {
     return (
       <AuthLayout
         title="E-Mail unterwegs"
-        subtitle="Falls ein Konto existiert, haben wir dir einen Link zum Zurücksetzen geschickt."
+        subtitle="Falls ein Konto existiert, haben wir dir einen Link zum Zurücksetzen geschickt. Schau auch im Spam-Ordner nach."
       >
         <Link to="/login">
           <Button variant="secondary" className="w-full">
@@ -55,7 +59,10 @@ export function ForgotPasswordPage() {
           <Input
             id="email"
             type="email"
-            autoComplete="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="email"
             placeholder="du@example.com"
             {...register('email')}

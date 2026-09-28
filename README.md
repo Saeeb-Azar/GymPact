@@ -46,6 +46,7 @@ diese Secrets anlegen (fehlende Secrets = Schritt wird übersprungen):
 | `SUPABASE_ACCESS_TOKEN` | supabase.com → Account → **Access Tokens** | Website-URL + „ohne Bestätigungsmail“ setzen (optional) |
 | `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | Hostinger → Website → **Dateien → FTP-Konten** | Upload nach `public_html` |
 | `FTP_DIR` (optional) | – | Zielordner, Standard `public_html/` |
+| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SENDER` (optional) | z. B. Brevo → *SMTP & API*: Host `smtp-relay.brevo.com`, Login, SMTP-Key, verifizierte Absender-Adresse | eigener Mailversand für „Passwort vergessen“ (Supabase selbst schickt nur an Team-Mitglieder und max. wenige Mails/Stunde) |
 | `ADMIN_EMAIL` (optional) | – | diese E-Mail nach der Registrierung zum Admin machen |
 
 Wichtig: Falls du `SUPABASE_DB_URL` nutzt, den **Session pooler** nehmen (nicht

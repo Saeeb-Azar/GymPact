@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 interface AuthContextValue {
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -31,9 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
         setSession(newSession);
         setLoading(false);
+        // Link aus der "Passwort zurücksetzen"-Mail → immer zum Formular für das neue Passwort
+        if (event === 'PASSWORD_RECOVERY') navigate('/reset-password', { replace: true });
       },
     );
     return () => subscription.subscription.unsubscribe();

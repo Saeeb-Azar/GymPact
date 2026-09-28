@@ -63,12 +63,17 @@ jobs:
           fi
           scripts/db-migrate.sh
 
-      - name: Supabase-Auth konfigurieren (Website-URL, Google-Login, keine Bestätigungsmail)
+      - name: Supabase-Auth konfigurieren (Website-URL, deutsche E-Mails, SMTP, Google-Login)
         if: env.SUPABASE_ACCESS_TOKEN != ''
         continue-on-error: true
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_SENDER: ${{ secrets.SMTP_SENDER }}
         run: |
           REF=$(grep '^VITE_SUPABASE_URL=' .env.production | sed -E 's#.*https://([^.]+)\..*#\1#')
           BODY=$(python3 - <<'PY'
@@ -79,6 +84,27 @@ jobs:
               body.update(external_google_enabled=True,
                           external_google_client_id=os.environ["GOOGLE_CLIENT_ID"],
                           external_google_secret=os.environ["GOOGLE_CLIENT_SECRET"])
+          button = ('<p><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:12px 20px;'
+                    'background:#0fcb84;color:#0a0b0f;border-radius:12px;text-decoration:none;font-weight:600">{label}</a></p>')
+          body.update(
+              mailer_subjects_recovery="GymPact: Passwort zurücksetzen",
+              mailer_templates_recovery_content="<h2>Passwort zurücksetzen</h2><p>Tippe auf den Button, um ein neues Passwort für GymPact festzulegen.</p>"
+                  + button.replace("{label}", "Neues Passwort festlegen")
+                  + "<p>Wenn du das nicht angefordert hast, ignoriere diese E-Mail einfach.</p>",
+              mailer_subjects_confirmation="GymPact: E-Mail bestätigen",
+              mailer_templates_confirmation_content="<h2>Willkommen bei GymPact</h2><p>Bitte bestätige deine E-Mail-Adresse.</p>"
+                  + button.replace("{label}", "E-Mail bestätigen"),
+          )
+          if os.environ.get("SMTP_HOST") and os.environ.get("SMTP_USER") and os.environ.get("SMTP_PASS"):
+              body.update(
+                  smtp_host=os.environ["SMTP_HOST"],
+                  smtp_port=os.environ.get("SMTP_PORT") or "587",
+                  smtp_user=os.environ["SMTP_USER"],
+                  smtp_pass=os.environ["SMTP_PASS"],
+                  smtp_admin_email=os.environ.get("SMTP_SENDER") or os.environ["SMTP_USER"],
+                  smtp_sender_name="GymPact",
+                  rate_limit_email_sent=30,
+              )
           print(json.dumps(body))
           PY
           )

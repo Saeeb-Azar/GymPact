@@ -8,6 +8,7 @@ import { loginSchema, type LoginValues } from '@/lib/validation';
 import { AuthLayout } from './AuthLayout';
 import { GoogleButton, OrDivider } from './GoogleButton';
 import { friendlyNetworkMessage } from '@/lib/netError';
+import { storeCredential } from '@/lib/credentials';
 import { Button, Field, Input } from '@/components/ui/basics';
 
 export function LoginPage() {
@@ -20,6 +21,7 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
 
@@ -39,6 +41,7 @@ export function LoginPage() {
       );
       return;
     }
+    await storeCredential(values.email.trim(), values.password);
     navigate(redirect, { replace: true });
   };
 
@@ -46,12 +49,15 @@ export function LoginPage() {
     <AuthLayout title="Anmelden" subtitle="Willkommen zurück!">
       <GoogleButton redirect={redirect} />
       <OrDivider />
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" method="post" action="/login" noValidate>
         <Field label="E-Mail" htmlFor="email" error={errors.email?.message}>
           <Input
             id="email"
             type="email"
-            autoComplete="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="email"
             placeholder="du@example.com"
             {...register('email')}
@@ -80,7 +86,7 @@ export function LoginPage() {
       <div className="mt-5 space-y-2 text-center text-sm">
         <p>
           <Link
-            to="/forgot-password"
+            to={`/forgot-password${watch('email') ? `?email=${encodeURIComponent(watch('email'))}` : ''}`}
             className="font-medium text-brand-600 hover:underline dark:text-brand-400"
           >
             Passwort vergessen?
