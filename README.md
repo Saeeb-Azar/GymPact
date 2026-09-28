@@ -32,6 +32,32 @@ gemeinsam verwenden; jeder sieht ausschließlich seine eigenen Daten.
   (Mifflin-St Jeor), Hell/Dunkel.
 - **Admin** – Nutzerübersicht mit Aktivitäts-Zählwerten (keine Inhalte).
 
+## Automatisches Deployment (GitHub Actions)
+
+Bei jedem Push auf `claude/neues-projekt-q6ro6k` läuft `.github/workflows/deploy.yml`:
+Tests → Build → **Datenbank-Migrationen in Supabase** → **Website nach Hostinger**.
+Einmalig unter *GitHub → Repository → Settings → Secrets and variables → Actions*
+diese Secrets anlegen (fehlende Secrets = Schritt wird übersprungen):
+
+| Secret | Woher | Wofür |
+| --- | --- | --- |
+| `SUPABASE_DB_URL` | Supabase → **Connect** → *Session pooler* → URI (Passwort einsetzen) | Tabellen anlegen/aktualisieren |
+| `SUPABASE_ACCESS_TOKEN` | supabase.com → Account → **Access Tokens** | Website-URL + „ohne Bestätigungsmail“ setzen (optional) |
+| `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | Hostinger → Website → **Dateien → FTP-Konten** | Upload nach `public_html` |
+| `FTP_DIR` (optional) | – | Zielordner, Standard `public_html/` |
+| `ADMIN_EMAIL` (optional) | – | diese E-Mail nach der Registrierung zum Admin machen |
+
+Wichtig: Für `SUPABASE_DB_URL` den **Session pooler** nehmen (nicht „Direct
+connection“ – die ist nur per IPv6 erreichbar, GitHub-Runner können das nicht).
+
+Ohne FTP geht es auch: Der Workflow legt die fertige Website immer in den
+Branch **`hostinger-build`**. In Hostinger unter *Website → Erweitert → Git*
+dieses Repo mit Branch `hostinger-build` und Ordner `public_html` verbinden
+und „Automatisches Deployment“ aktivieren.
+
+Der **erste Nutzer**, der sich registriert, wird automatisch Admin
+(Migration `0010_first_admin.sql`).
+
 ## Neues Supabase-Projekt aufsetzen (Schritt für Schritt)
 
 1. Auf [supabase.com](https://supabase.com) → **New project** (Region z. B.
@@ -54,12 +80,7 @@ gemeinsam verwenden; jeder sieht ausschließlich seine eigenen Daten.
    dann `npm install && npm run build` und den **Inhalt** von `dist/` nach
    Hostinger (`public_html`) hochladen. (Baut Hostinger selbst aus Git, die
    beiden Variablen dort als Umgebungsvariablen eintragen.)
-6. In der App registrieren und dich im SQL-Editor zum Admin machen:
-   ```sql
-   insert into public.app_admins (user_id)
-   select id from auth.users where email = 'deine-email@example.com'
-   on conflict (user_id) do nothing;
-   ```
+6. In der App registrieren – der erste Nutzer wird automatisch Admin.
 
 Zeigt die App beim Anmelden „Server nicht erreichbar“, ist das Projekt
 pausiert (Dashboard → *Restore project*) oder der Build enthält eine

@@ -3,14 +3,11 @@
 --
 -- Einmal komplett im Supabase SQL-Editor ausführen
 -- (Dashboard → SQL Editor → New query → alles einfügen → Run).
--- Enthält alle Migrationen 0001–0009 in der richtigen Reihenfolge.
+-- Enthält alle Migrationen in der richtigen Reihenfolge.
 --
--- Danach dich selbst zum Admin machen (NACH deiner Registrierung):
---   insert into public.app_admins (user_id)
---   select id from auth.users where email = 'deine-email@example.com'
---   on conflict (user_id) do nothing;
+-- Enthält alle Migrationen. Der ERSTE Nutzer, der sich danach in der App
+-- registriert, wird automatisch Admin.
 -- ============================================================
-
 
 -- >>>>>>>>>>>>>>>>>>>> migrations/0001_schema.sql
 -- ============================================================
@@ -1772,3 +1769,51 @@ exception when others then
   null;
 end;
 $$;
+
+-- >>>>>>>>>>>>>>>>>>>> migrations/0010_first_admin.sql
+-- ============================================================
+-- GymPact – 0010: Erster Nutzer wird automatisch Admin
+--
+-- Gibt es noch keinen einzigen Admin, bekommt das erste neu angelegte
+-- Profil Admin-Rechte. Sobald ein Admin existiert, passiert nichts mehr –
+-- weitere Nutzer (z. B. Familie, Freunde) bleiben normale Nutzer.
+-- ============================================================
+
+create or replace function public.make_first_user_admin()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.app_admins) then
+    insert into public.app_admins (user_id) values (new.id)
+    on conflict (user_id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.make_first_user_admin() from anon, authenticated;
+
+drop trigger if exists trg_first_user_admin on public.profiles;
+create trigger trg_first_user_admin
+  after insert on public.profiles
+  for each row execute function public.make_first_user_admin();
+
+-- Merken, welche Migrationen angewendet sind (für automatische Updates)
+create schema if not exists gympact_meta;
+revoke all on schema gympact_meta from public;
+create table if not exists gympact_meta.migrations (name text primary key, applied_at timestamptz not null default now());
+insert into gympact_meta.migrations (name) values
+  ('0001_schema.sql'),
+  ('0002_rls.sql'),
+  ('0003_functions.sql'),
+  ('0004_realtime.sql'),
+  ('0005_admin.sql'),
+  ('0006_habit_targets.sql'),
+  ('0007_group_targets_email.sql'),
+  ('0008_test_push_email_off.sql'),
+  ('0009_tracker.sql'),
+  ('0010_first_admin.sql')
+on conflict do nothing;

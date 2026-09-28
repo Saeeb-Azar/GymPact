@@ -1,0 +1,87 @@
+# Automatisches Deployment bei jedem Push auf den Live-Branch:
+#   1. Tests + Build (Supabase-URL/-Key kommen aus .env.production)
+#   2. Datenbank: neue Migrationen in Supabase einspielen   (Secret SUPABASE_DB_URL)
+#   3. Supabase-Auth: Website-URL eintragen                 (Secret SUPABASE_ACCESS_TOKEN, optional)
+#   4. Fertige Website in den Branch "hostinger-build" legen (für Hostinger-Git)
+#   5. Optional per FTP direkt nach Hostinger hochladen     (Secrets FTP_SERVER/FTP_USERNAME/FTP_PASSWORD)
+# Fehlt ein Secret, wird der jeweilige Schritt übersprungen.
+
+name: Deploy
+
+on:
+  push:
+    branches: [claude/neues-projekt-q6ro6k]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  SITE_URL: ${{ vars.SITE_URL || 'https://lightsteelblue-otter-468534.hostingersite.com' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      FTP_SERVER: ${{ secrets.FTP_SERVER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: |
+          npm run build
+          find dist -name '*.map' -delete
+
+      - name: Datenbank-Migrationen (Supabase)
+        if: env.SUPABASE_DB_URL != ''
+        run: |
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+          scripts/db-migrate.sh
+
+      - name: Supabase-Auth konfigurieren (Website-URL, keine Bestätigungsmail)
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        continue-on-error: true
+        run: |
+          REF=$(grep '^VITE_SUPABASE_URL=' .env.production | sed -E 's#.*https://([^.]+)\..*#\1#')
+          curl -fsS -X PATCH "https://api.supabase.com/v1/projects/$REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"site_url\":\"$SITE_URL\",\"uri_allow_list\":\"$SITE_URL/**\",\"mailer_autoconfirm\":true}" \
+            -o /dev/null && echo "Auth-Einstellungen gesetzt für $REF"
+
+      - name: Website in Branch "hostinger-build" veröffentlichen
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: hostinger-build
+          publish_dir: ./dist
+          force_orphan: true
+          commit_message: 'Build'
+
+      - name: Per FTP zu Hostinger hochladen
+        if: env.FTP_SERVER != ''
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: ${{ secrets.FTP_DIR || 'public_html/' }}
