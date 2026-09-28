@@ -83,7 +83,7 @@ export class BodyScene3D {
   private uniforms = {
     uTime: { value: 0 },
     uDim: { value: 0 },
-    uHeatColor: { value: new THREE.Color('#0fcb84') },
+    uHeatColor: { value: new THREE.Color('#4d9e73') },
     uSelColor: { value: new THREE.Color('#f43f5e') },
   };
   private raycaster = new THREE.Raycaster();
@@ -422,7 +422,7 @@ export class BodyScene3D {
 
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.48, 0.5, 96),
-      new THREE.MeshBasicMaterial({ color: '#0fcb84', transparent: true, opacity: 0.35, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ color: '#4d9e73', transparent: true, opacity: 0.35, side: THREE.DoubleSide }),
     );
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.003;
