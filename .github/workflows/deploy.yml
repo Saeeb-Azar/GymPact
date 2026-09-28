@@ -1,6 +1,6 @@
 # Automatisches Deployment bei jedem Push auf den Live-Branch:
 #   1. Tests + Build (Supabase-URL/-Key kommen aus .env.production)
-#   2. Datenbank: neue Migrationen in Supabase einspielen   (Secret SUPABASE_DB_URL)
+#   2. Datenbank: neue Migrationen in Supabase einspielen   (Secret SUPABASE_DB_PASSWORD oder SUPABASE_DB_URL)
 #   3. Supabase-Auth: Website-URL eintragen                 (Secret SUPABASE_ACCESS_TOKEN, optional)
 #   4. Fertige Website in den Branch "hostinger-build" legen (für Hostinger-Git)
 #   5. Optional per FTP direkt nach Hostinger hochladen     (Secrets FTP_SERVER/FTP_USERNAME/FTP_PASSWORD)
@@ -28,6 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
       FTP_SERVER: ${{ secrets.FTP_SERVER }}
@@ -51,9 +52,15 @@ jobs:
           find dist -name '*.map' -delete
 
       - name: Datenbank-Migrationen (Supabase)
-        if: env.SUPABASE_DB_URL != ''
+        if: env.SUPABASE_DB_URL != '' || env.SUPABASE_DB_PASSWORD != ''
         run: |
           sudo apt-get install -y -qq postgresql-client >/dev/null
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            REF=$(grep '^VITE_SUPABASE_URL=' .env.production | sed -E 's#.*https://([^.]+)\..*#\1#')
+            SUPABASE_DB_URL=$(scripts/find-db-url.sh "$REF")
+            echo "::add-mask::$SUPABASE_DB_URL"
+            export SUPABASE_DB_URL
+          fi
           scripts/db-migrate.sh
 
       - name: Supabase-Auth konfigurieren (Website-URL, keine Bestätigungsmail)

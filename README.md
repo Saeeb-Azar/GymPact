@@ -41,14 +41,15 @@ diese Secrets anlegen (fehlende Secrets = Schritt wird übersprungen):
 
 | Secret | Woher | Wofür |
 | --- | --- | --- |
-| `SUPABASE_DB_URL` | Supabase → **Connect** → *Session pooler* → URI (Passwort einsetzen) | Tabellen anlegen/aktualisieren |
+| `SUPABASE_DB_PASSWORD` | das Datenbank-Passwort, das du beim Anlegen des Supabase-Projekts vergeben hast | Tabellen anlegen/aktualisieren (Server wird automatisch gefunden) |
+| `SUPABASE_DB_URL` (Alternative) | Supabase → **Connect** → *Session pooler* → URI | statt Passwort, falls die automatische Suche scheitert |
 | `SUPABASE_ACCESS_TOKEN` | supabase.com → Account → **Access Tokens** | Website-URL + „ohne Bestätigungsmail“ setzen (optional) |
 | `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | Hostinger → Website → **Dateien → FTP-Konten** | Upload nach `public_html` |
 | `FTP_DIR` (optional) | – | Zielordner, Standard `public_html/` |
 | `ADMIN_EMAIL` (optional) | – | diese E-Mail nach der Registrierung zum Admin machen |
 
-Wichtig: Für `SUPABASE_DB_URL` den **Session pooler** nehmen (nicht „Direct
-connection“ – die ist nur per IPv6 erreichbar, GitHub-Runner können das nicht).
+Wichtig: Falls du `SUPABASE_DB_URL` nutzt, den **Session pooler** nehmen (nicht
+„Direct connection“ `db.<ref>.supabase.co` – die ist nur per IPv6 erreichbar).
 
 Ohne FTP geht es auch: Der Workflow legt die fertige Website immer in den
 Branch **`hostinger-build`**. In Hostinger unter *Website → Erweitert → Git*
