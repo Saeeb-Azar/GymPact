@@ -165,7 +165,7 @@ export function BarcodeScanner({
             ))}
             {status === 'scanning' && (
               <motion.span
-                className="absolute inset-x-4 h-0.5 rounded-full bg-brand-400 shadow-[0_0_12px_2px_rgba(46,227,157,0.8)]"
+                className="absolute inset-x-4 h-0.5 rounded-full bg-brand-400 shadow-[0_0_10px_1px_rgba(111,171,139,0.7)]"
                 initial={{ top: '12%' }}
                 animate={{ top: ['12%', '88%', '12%'] }}
                 transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}

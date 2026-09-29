@@ -246,10 +246,10 @@ export class BodyScene3D {
     fill.position.set(-3, 2, 2);
     this.scene.add(fill);
     // Kantenlichter geben Volumen und die Markenfarben
-    const rimA = new THREE.DirectionalLight(0x2ee39d, 2.2);
+    const rimA = new THREE.DirectionalLight(0x6fab8b, 1.6);
     rimA.position.set(-3, 2.5, -3);
     this.scene.add(rimA);
-    const rimB = new THREE.DirectionalLight(0x8b5cf6, 1.8);
+    const rimB = new THREE.DirectionalLight(0x7a7fd1, 1.3);
     rimB.position.set(3, 1.5, -3);
     this.scene.add(rimB);
   }
