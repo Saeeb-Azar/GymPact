@@ -62,7 +62,7 @@ export function SettingsPage() {
       <AppearanceSection />
       {isAdmin && (
         <Link to="/admin" className="card flex items-center gap-3 p-4">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 text-white">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7a7fd1] text-white">
             <IconShield size={20} />
           </span>
           <span className="flex-1">
@@ -300,9 +300,9 @@ function GoalsSection() {
           {field('fat_g', 'Fett', 'g')}
         </div>
         <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-200 dark:bg-white/[0.07]">
-          <span style={{ width: `${split.protein * 100}%`, background: '#8b5cf6' }} />
-          <span className="border-l-2 border-white dark:border-surface-850" style={{ width: `${split.carbs * 100}%`, background: '#d97706' }} />
-          <span className="border-l-2 border-white dark:border-surface-850" style={{ width: `${split.fat * 100}%`, background: '#ec4899' }} />
+          <span style={{ width: `${split.protein * 100}%`, background: '#7a7fd1' }} />
+          <span className="border-l-2 border-white dark:border-surface-850" style={{ width: `${split.carbs * 100}%`, background: '#a3762a' }} />
+          <span className="border-l-2 border-white dark:border-surface-850" style={{ width: `${split.fat * 100}%`, background: '#c9557e' }} />
         </div>
         <p className={`text-xs ${Math.abs(macroKcal - parsed.calories) > parsed.calories * 0.1 ? 'text-amber-600 dark:text-amber-400' : 'muted'}`}>
           Makros ergeben {macroKcal.toLocaleString('de-DE')} kcal · P {Math.round(split.protein * 100)} % · K{' '}

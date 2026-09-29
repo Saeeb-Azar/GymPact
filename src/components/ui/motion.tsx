@@ -84,7 +84,7 @@ export function Segmented<T extends string>({
             {active && (
               <motion.span
                 layoutId={`seg-${id}`}
-                className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-300 to-brand-500 shadow-glow"
+                className="absolute inset-0 rounded-xl bg-brand-600 dark:bg-brand-500"
                 transition={{ type: 'spring', stiffness: 500, damping: 38 }}
               />
             )}
@@ -226,7 +226,7 @@ export function TiltCard({
   const glare = useTransform(
     [glareX, glareY],
     ([gx, gy]) =>
-      `radial-gradient(circle at ${gx} ${gy}, rgba(255,255,255,0.18), transparent 55%)`,
+      `radial-gradient(circle at ${gx} ${gy}, rgba(255,255,255,0.10), transparent 55%)`,
   );
 
   return (

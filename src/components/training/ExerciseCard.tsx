@@ -53,7 +53,7 @@ export function ExerciseCard({
       transition={{ delay: index * 0.04, type: 'spring', stiffness: 280, damping: 26 }}
     >
       <div className="flex items-start gap-3 p-4 pb-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 font-display text-sm font-bold text-violet-500">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#7a7fd1]/15 font-display text-sm font-bold text-[#7a7fd1]">
           {index + 1}
         </span>
         <div className="min-w-0 flex-1">
@@ -233,7 +233,7 @@ function SetRow({
         }
         className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${
           set.done
-            ? 'bg-gradient-to-br from-brand-300 to-brand-500 text-surface-950 shadow-glow'
+            ? 'bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950'
             : 'bg-surface-100 muted dark:bg-white/[0.05]'
         }`}
         aria-label={set.done ? 'Satz als offen markieren' : 'Satz erledigt'}

@@ -17,7 +17,7 @@ export function AuthLayout({
       style={{ paddingTop: 'calc(var(--safe-top) + 2rem)' }}
     >
       <div className="mb-8 flex flex-col items-center text-center">
-        <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-300 to-brand-600 text-surface-950 shadow-glow">
+        <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950">
           <IconDumbbell size={32} strokeWidth={2.2} />
         </span>
         <span className="font-display text-4xl font-bold tracking-tight">

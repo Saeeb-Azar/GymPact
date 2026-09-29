@@ -310,13 +310,13 @@ function WorkoutCard({ workout, index, onOpen }: { workout: WorkoutFull; index: 
       className={`card relative block w-full overflow-hidden p-4 text-left ${done ? 'ring-1 ring-brand-500/40' : ''}`}
     >
       {done && (
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-400/10 to-transparent" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-brand-500/[0.05]" />
       )}
       <div className="relative flex items-start gap-3">
         <div
           className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl ${
             done
-              ? 'bg-gradient-to-br from-brand-300 to-brand-500 text-surface-950 shadow-glow'
+              ? 'bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950'
               : 'bg-surface-100 dark:bg-white/[0.06]'
           }`}
         >
@@ -341,7 +341,7 @@ function WorkoutCard({ workout, index, onOpen }: { workout: WorkoutFull; index: 
           {sets.length > 0 && (
             <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-surface-200 dark:bg-white/[0.07]">
               <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-brand-300 to-brand-500"
+                className="h-full rounded-full bg-brand-500"
                 initial={{ width: 0 }}
                 animate={{ width: `${(done ? 1 : progress) * 100}%` }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}

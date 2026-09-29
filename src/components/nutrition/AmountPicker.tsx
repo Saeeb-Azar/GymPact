@@ -77,10 +77,10 @@ export function AmountPicker({
       </div>
 
       <div className="grid grid-cols-4 gap-2 text-center">
-        <MacroTile label="kcal" value={m.kcal} color="#0fcb84" />
-        <MacroTile label="Protein" value={m.protein} color="#8b5cf6" decimals={1} />
-        <MacroTile label="Kohlenh." value={m.carbs} color="#d97706" decimals={1} />
-        <MacroTile label="Fett" value={m.fat} color="#ec4899" decimals={1} />
+        <MacroTile label="kcal" value={m.kcal} color="#4d9e73" />
+        <MacroTile label="Protein" value={m.protein} color="#7a7fd1" decimals={1} />
+        <MacroTile label="Kohlenh." value={m.carbs} color="#a3762a" decimals={1} />
+        <MacroTile label="Fett" value={m.fat} color="#c9557e" decimals={1} />
       </div>
 
       <div className="flex gap-2">

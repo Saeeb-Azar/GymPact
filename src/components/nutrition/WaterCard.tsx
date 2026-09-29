@@ -61,7 +61,7 @@ export function WaterCard({ date, goalMl }: { date: DateString; goalMl: number }
               aria-label={`${i + 1} Gläser`}
             >
               <motion.span
-                className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-sky-500 to-water"
+                className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-water to-water/70"
                 initial={false}
                 animate={{ height: full ? '100%' : '0%' }}
                 transition={{ type: 'spring', stiffness: 200, damping: 20, delay: full ? i * 0.02 : 0 }}

@@ -7,8 +7,8 @@ export function Ring({
   max,
   size = 180,
   stroke = 16,
-  from = '#6cf2bb',
-  to = '#0fcb84',
+  from = '#5ca983',
+  to = '#4d9e73',
   children,
   label,
 }: {

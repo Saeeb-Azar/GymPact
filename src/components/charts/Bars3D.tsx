@@ -17,7 +17,7 @@ export interface Bar3DDatum {
 export function Bars3D({
   data,
   goal,
-  color = '#0fcb84',
+  color = '#4d9e73',
   unit = '',
   format = (v: number) => Math.round(v).toLocaleString('de-DE'),
   height = 190,
@@ -146,8 +146,8 @@ export function Bars3D({
                 bottom: scale(goal) - (depth + 20) / 2,
                 height: depth + 20,
                 transform: 'rotateX(90deg)',
-                background: 'rgba(139, 92, 246, 0.14)',
-                border: '1.5px dashed rgba(139, 92, 246, 0.7)',
+                background: 'rgba(138, 133, 120, 0.12)',
+                border: '1.5px dashed rgba(138, 133, 120, 0.65)',
                 borderRadius: 6,
               }}
             />

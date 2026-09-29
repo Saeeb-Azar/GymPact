@@ -32,7 +32,7 @@ export function WeightCard({ date }: { date: DateString }) {
 
   return (
     <div className="card flex items-center gap-3 p-4">
-      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/15 text-violet-500">
+      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#7a7fd1]/15 text-[#7a7fd1]">
         <IconScale size={18} />
       </span>
       <div className="min-w-0 flex-1">

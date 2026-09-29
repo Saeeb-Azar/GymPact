@@ -87,14 +87,14 @@ export function HomePage() {
           icon={<IconFood size={22} />}
           title="Essen eintragen"
           sub={`Als ${{ breakfast: 'Frühstück', lunch: 'Mittagessen', dinner: 'Abendessen', snack: 'Snack' }[mealForHour(hour)]}`}
-          gradient="from-amber-400/25 to-pink-500/20"
+          gradient="from-[#a3762a]/20 to-[#a3762a]/5"
         />
         <QuickAction
           to="/training?view=body"
           icon={<IconBody size={22} />}
           title="Muskelkarte"
           sub="Muskeln & Übungen"
-          gradient="from-violet-500/25 to-sky-400/20"
+          gradient="from-[#7a7fd1]/20 to-[#7a7fd1]/5"
         />
       </motion.div>
 
@@ -104,13 +104,13 @@ export function HomePage() {
           onClick={() => navigate(todays ? `/training/workout/${todays.id}` : '/training')}
           className="card relative block w-full overflow-hidden p-5 text-left"
         >
-          <div aria-hidden className="pointer-events-none absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-[#7a7fd1]/10 blur-3xl" />
           <div className="relative flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-400 to-violet-600 text-white shadow-lg shadow-violet-500/30">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#7a7fd1] text-white shadow-card">
               <IconDumbbell size={28} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7a7fd1]">
                 KW {isoWeek(today)} · {doneCount}/{workouts.length} erledigt
               </p>
               <p className="truncate font-display text-xl font-bold">
@@ -132,7 +132,7 @@ export function HomePage() {
                 <span
                   key={w.id}
                   className={`flex h-7 flex-1 items-center justify-center rounded-lg text-[10px] font-bold ${
-                    w.done_at ? 'bg-gradient-to-br from-brand-300 to-brand-500 text-surface-950' : 'bg-surface-100 muted dark:bg-white/[0.06]'
+                    w.done_at ? 'bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950' : 'bg-surface-100 muted dark:bg-white/[0.06]'
                   }`}
                   title={w.name}
                 >

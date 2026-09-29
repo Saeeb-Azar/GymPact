@@ -30,25 +30,25 @@ const STEPS = [
     icon: IconSparkles,
     title: 'Willkommen beim neuen GymPact',
     text: 'Keine Challenges mehr – hier geht es nur um deinen Fortschritt. Ernährung, Training und Statistiken an einem Ort.',
-    gradient: 'from-brand-400/40 to-violet-500/30',
+    gradient: 'from-brand-500/25 to-brand-500/5',
   },
   {
     icon: IconFood,
     title: 'Ernährung tracken',
     text: 'Trag dein Essen pro Mahlzeit ein – aus deiner Bibliothek, der Open-Food-Facts-Datenbank oder als Schnell-Eintrag. Kalorien, Protein, Kohlenhydrate, Fett und Wasser im Blick.',
-    gradient: 'from-amber-400/40 to-pink-500/30',
+    gradient: 'from-[#a3762a]/25 to-[#a3762a]/5',
   },
   {
     icon: IconDumbbell,
     title: 'Trainingsplan in Wochen',
     text: 'Leg jede Woche deine Einheiten an, schreib Übungen mit Gewicht und Wiederholungen auf – und übernimm mit einem Tipp die Vorwoche, um dich zu steigern.',
-    gradient: 'from-violet-500/40 to-sky-400/30',
+    gradient: 'from-[#7a7fd1]/25 to-[#7a7fd1]/5',
   },
   {
     icon: IconChart,
     title: 'Statistiken, die motivieren',
     text: 'Kalorienverlauf, Makroverteilung, Körpergewicht, Trainingsvolumen und Bestleistungen je Übung – übersichtlich aufbereitet – dazu eine Muskelkarte deines Körpers.',
-    gradient: 'from-sky-400/40 to-brand-400/30',
+    gradient: 'from-[#3d92d4]/25 to-[#3d92d4]/5',
   },
 ];
 

@@ -30,9 +30,9 @@ export function DaySummary({ total, goals }: { total: Macros; goals: Goals }) {
               <span className="text-xs font-normal muted"> / {goals.calories.toLocaleString('de-DE')}</span>
             </span>
           </div>
-          <MacroBar label="Protein" value={total.protein} goal={goals.protein_g} color="#8b5cf6" compact />
-          <MacroBar label="Kohlenhydrate" value={total.carbs} goal={goals.carbs_g} color="#d97706" compact />
-          <MacroBar label="Fett" value={total.fat} goal={goals.fat_g} color="#ec4899" compact />
+          <MacroBar label="Protein" value={total.protein} goal={goals.protein_g} color="#7a7fd1" compact />
+          <MacroBar label="Kohlenhydrate" value={total.carbs} goal={goals.carbs_g} color="#a3762a" compact />
+          <MacroBar label="Fett" value={total.fat} goal={goals.fat_g} color="#c9557e" compact />
         </div>
       </div>
     </TiltCard>

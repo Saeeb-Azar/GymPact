@@ -163,7 +163,7 @@ function FoodStats({ from, today, days }: { from: DateString; today: DateString;
       </div>
 
       <ChartCard title="Kalorien" subtitle={days <= 7 ? 'pro Tag' : 'Ø pro Woche (getrackte Tage)'}>
-        <Bars3D data={bars} goal={goals?.calories} unit="kcal" color="#0fcb84" />
+        <Bars3D data={bars} goal={goals?.calories} unit="kcal" color="#4d9e73" />
       </ChartCard>
 
       <ChartCard title="Protein" subtitle="pro Tag, Linie = Ziel">
@@ -175,7 +175,7 @@ function FoodStats({ from, today, days }: { from: DateString; today: DateString;
             value: t.logged ? t.macros.protein : null,
           }))}
           goal={goals?.protein_g}
-          color="#8b5cf6"
+          color="#7a7fd1"
           unit="g"
         />
       </ChartCard>
@@ -185,9 +185,9 @@ function FoodStats({ from, today, days }: { from: DateString; today: DateString;
           centerTop={Math.round(avgMacros.kcal).toLocaleString('de-DE')}
           centerBottom="Ø kcal"
           slices={[
-            { key: 'p', label: 'Protein', value: split.protein, color: '#8b5cf6', detail: `${Math.round(avgMacros.protein)} g` },
-            { key: 'c', label: 'Kohlenhydrate', value: split.carbs, color: '#d97706', detail: `${Math.round(avgMacros.carbs)} g` },
-            { key: 'f', label: 'Fett', value: split.fat, color: '#ec4899', detail: `${Math.round(avgMacros.fat)} g` },
+            { key: 'p', label: 'Protein', value: split.protein, color: '#7a7fd1', detail: `${Math.round(avgMacros.protein)} g` },
+            { key: 'c', label: 'Kohlenhydrate', value: split.carbs, color: '#a3762a', detail: `${Math.round(avgMacros.carbs)} g` },
+            { key: 'f', label: 'Fett', value: split.fat, color: '#c9557e', detail: `${Math.round(avgMacros.fat)} g` },
           ]}
         />
       </ChartCard>
@@ -201,7 +201,7 @@ function FoodStats({ from, today, days }: { from: DateString; today: DateString;
               </span>
               <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-200 dark:bg-white/[0.07]">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-300 to-brand-500"
+                  className="h-full rounded-full bg-brand-500"
                   initial={{ width: 0 }}
                   animate={{ width: `${(m.kcal / mealMax) * 100}%` }}
                   transition={{ delay: 0.2 + i * 0.08, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -299,7 +299,7 @@ function TrainingStats({ from, today }: { from: DateString; today: DateString })
         <Bars3D
           data={volBars}
           unit="t"
-          color="#8b5cf6"
+          color="#7a7fd1"
           format={(v) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 })}
           emptyLabel="Noch keine Trainingsdaten"
         />
@@ -323,7 +323,7 @@ function TrainingStats({ from, today }: { from: DateString; today: DateString })
                   .sort((a, b) => a[0].localeCompare(b[0]))
                   .slice(-16)
                   .map(([w, v]) => ({ key: w, label: `KW${isoWeek(w)}`, title: `KW ${isoWeek(w)}`, value: v }))}
-                color="#0fcb84"
+                color="#4d9e73"
                 unit="kg"
                 decimals={1}
               />
@@ -376,7 +376,7 @@ function TrainingStats({ from, today }: { from: DateString; today: DateString })
                 <span className="w-24 truncate text-sm">{m.label}</span>
                 <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-200 dark:bg-white/[0.07]">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-600"
+                    className="h-full rounded-full bg-[#7a7fd1]"
                     initial={{ width: 0 }}
                     animate={{ width: `${((muscleSets.get(m.id) ?? 0) / muscleMax) * 100}%` }}
                     transition={{ delay: 0.2 + i * 0.05, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -393,7 +393,7 @@ function TrainingStats({ from, today }: { from: DateString; today: DateString })
         <Heatmap
           from={from}
           to={today}
-          color="#8b5cf6"
+          color="#7a7fd1"
           values={trainingDays}
           describe={(d, v) => `${formatDateShort(d)} · ${v ? 'trainiert' : 'kein Training'}`}
         />
@@ -434,7 +434,7 @@ function BodyStats({ from, today }: { from: DateString; today: DateString }) {
             title: formatDateShort(d),
             value: byDate.get(d)?.body_weight_kg != null ? Number(byDate.get(d)!.body_weight_kg) : null,
           }))}
-          color="#8b5cf6"
+          color="#7a7fd1"
           unit="kg"
           decimals={1}
           emptyLabel="Trag dein Gewicht unter „Essen“ ein"
@@ -451,7 +451,7 @@ function BodyStats({ from, today }: { from: DateString; today: DateString }) {
           }))}
           goal={goals ? goals.water_ml / 1000 : undefined}
           unit="l"
-          color="#38bdf8"
+          color="#3d92d4"
           format={(v) => v.toLocaleString('de-DE', { maximumFractionDigits: 2 })}
         />
       </ChartCard>
