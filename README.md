@@ -14,6 +14,10 @@ gemeinsam verwenden; jeder sieht ausschließlich seine eigenen Daten.
   der gemeinsamen Bibliothek, der **Open-Food-Facts**-Datenbank (online,
   ohne API-Key) oder als Schnell-Eintrag. „Zuletzt gegessen“, Mahlzeit bzw.
   ganzen Tag vom Vortag übernehmen, Wasser-Tracker, Körpergewicht.
+  **Barcode-Scanner**: EAN/UPC mit der Kamera scannen → Nährwerte kommen aus der
+  eigenen Bibliothek bzw. Open Food Facts; unbekannte Produkte einmal anlegen,
+  danach erkennt die App sie sofort. Android nutzt den eingebauten
+  BarcodeDetector, iPhone/Safari ZXing-WebAssembly (selbst gehostet, nur beim Scannen geladen).
 - **Training** – Trainingsplan **in Wochen** (KW): Einheiten → Übungen →
   Sätze mit Gewicht und Wiederholungen. „Vorwoche übernehmen“ kopiert den
   kompletten Plan inkl. Gewichten; jede Übung zeigt „Letztes Mal“, erkennt

@@ -236,6 +236,13 @@ export function useFoodSearch(term: string) {
   });
 }
 
+/** Lebensmittel aus der gemeinsamen Bibliothek per Barcode finden. */
+export async function findFoodByBarcode(code: string): Promise<FoodRow | null> {
+  const { data, error } = await supabase.from('foods').select('*').eq('barcode', code).limit(1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export function useCreateFood() {
   const { user } = useAuth();
   const qc = useQueryClient();

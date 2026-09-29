@@ -368,3 +368,29 @@ export function IconInfo(props: IconProps) {
     </svg>
   );
 }
+
+export function IconBarcode(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+      <path d="M7 8v8M10 8v8M13 8v8M16 8v8M18.5 8v8" />
+    </svg>
+  );
+}
+
+export function IconFlash(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8Z" />
+    </svg>
+  );
+}
+
+export function IconKeyboard(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
+      <path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9" />
+    </svg>
+  );
+}

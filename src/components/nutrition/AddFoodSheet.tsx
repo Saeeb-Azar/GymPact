@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import type { FoodEntryRow, FoodRow, MealType } from '@/lib/database.types';
 import type { DateString } from '@/lib/dates';
 import { MEALS } from '@/lib/nutrition';
-import { searchOpenFoodFacts, type OffProduct } from '@/lib/openFoodFacts';
+import { lookupBarcode, searchOpenFoodFacts, type OffProduct } from '@/lib/openFoodFacts';
 import {
   useAddFoodEntries,
+  findFoodByBarcode,
   useCreateFood,
   useFoodSearch,
   useRecentFoods,
@@ -15,7 +16,8 @@ import { errorMessage } from '@/hooks/queries';
 import { Button, Field, Input, Spinner } from '../ui/basics';
 import { Segmented, Sheet } from '../ui/motion';
 import { useToast } from '../ui/toast';
-import { IconFood, IconPlus, IconSearch, IconSparkles } from '../icons';
+import { IconBarcode, IconFood, IconPlus, IconSearch, IconSparkles } from '../icons';
+import { BarcodeScanner } from './BarcodeScanner';
 import { MealIcon } from './MealIcon';
 import { AmountPicker, type Per100 } from './AmountPicker';
 
@@ -23,7 +25,8 @@ type View =
   | { kind: 'browse' }
   | { kind: 'amount'; food: Per100; foodId: string | null; off?: OffProduct }
   | { kind: 'quick' }
-  | { kind: 'create' };
+  | { kind: 'lookup'; code: string }
+  | { kind: 'create'; barcode?: string; notice?: string };
 
 export function AddFoodSheet({
   open,
@@ -38,6 +41,7 @@ export function AddFoodSheet({
 }) {
   const [meal, setMeal] = useState<MealType>(initialMeal);
   const [view, setView] = useState<View>({ kind: 'browse' });
+  const [scanning, setScanning] = useState(false);
   const add = useAddFoodEntries();
   const createFood = useCreateFood();
   const { showToast } = useToast();
@@ -46,6 +50,8 @@ export function AddFoodSheet({
     if (open) {
       setMeal(initialMeal);
       setView({ kind: 'browse' });
+    } else {
+      setScanning(false);
     }
   }, [open, initialMeal]);
 
@@ -59,11 +65,45 @@ export function AddFoodSheet({
     }
   };
 
+  /** Gescannten Code auflösen: eigene Bibliothek → Open Food Facts → neu anlegen. */
+  const handleCode = async (code: string) => {
+    setScanning(false);
+    setView({ kind: 'lookup', code });
+    try {
+      const own = await findFoodByBarcode(code);
+      if (own) {
+        setView({ kind: 'amount', food: own, foodId: own.id });
+        return;
+      }
+    } catch {
+      // weiter mit Online-Suche
+    }
+    try {
+      const off = await lookupBarcode(code);
+      if (off) {
+        setView({ kind: 'amount', food: { ...off, default_amount_g: off.serving_g ?? 100 }, foodId: null, off });
+        return;
+      }
+      setView({
+        kind: 'create',
+        barcode: code,
+        notice: `Produkt ${code} ist noch nicht bekannt. Trag die Nährwerte einmal von der Packung ein – danach erkennt die App es beim Scannen sofort.`,
+      });
+    } catch {
+      setView({
+        kind: 'create',
+        barcode: code,
+        notice: 'Die Online-Datenbank ist gerade nicht erreichbar. Du kannst das Produkt mit den Werten von der Packung selbst anlegen.',
+      });
+    }
+  };
+
   const titles: Record<View['kind'], string> = {
     browse: 'Essen hinzufügen',
     amount: 'Menge wählen',
     quick: 'Schnell-Eintrag',
     create: 'Neues Lebensmittel',
+    lookup: 'Produkt wird gesucht',
   };
 
   return (
@@ -135,6 +175,7 @@ export function AddFoodSheet({
               }}
               onQuick={() => setView({ kind: 'quick' })}
               onCreate={() => setView({ kind: 'create' })}
+              onScan={() => setScanning(true)}
             />
           )}
 
@@ -184,8 +225,25 @@ export function AddFoodSheet({
             />
           )}
 
+          {view.kind === 'lookup' && (
+            <div className="flex flex-col items-center gap-4 py-10 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-600 dark:text-brand-400">
+                <IconBarcode size={28} />
+              </span>
+              <div>
+                <p className="font-display text-lg font-bold num tracking-wider">{view.code}</p>
+                <p className="text-sm muted">Nährwerte werden gesucht …</p>
+              </div>
+              <Spinner className="h-6 w-6 text-brand-500" />
+            </div>
+          )}
+
           {view.kind === 'create' && (
             <CreateFoodForm
+              key={view.barcode ?? 'new'}
+              barcode={view.barcode}
+              notice={view.notice}
+              onScanAgain={view.barcode ? () => setScanning(true) : undefined}
               loading={createFood.isPending}
               onBack={() => setView({ kind: 'browse' })}
               onSubmit={async (v) => {
@@ -201,6 +259,9 @@ export function AddFoodSheet({
           )}
         </motion.div>
       </AnimatePresence>
+      <AnimatePresence>
+        {scanning && <BarcodeScanner onDetected={handleCode} onClose={() => setScanning(false)} />}
+      </AnimatePresence>
     </Sheet>
   );
 }
@@ -212,12 +273,14 @@ function Browse({
   onPickRecent,
   onQuick,
   onCreate,
+  onScan,
 }: {
   onPickFood: (f: FoodRow) => void;
   onPickOff: (p: OffProduct) => void;
   onPickRecent: (e: FoodEntryRow) => void;
   onQuick: () => void;
   onCreate: () => void;
+  onScan: () => void;
 }) {
   const [term, setTerm] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -248,16 +311,28 @@ function Browse({
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <IconSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 muted" size={20} />
-        <Input
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          placeholder="Lebensmittel suchen …"
-          className="pl-11"
-          type="search"
-          enterKeyHint="search"
-        />
+      <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
+          <IconSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 muted" size={20} />
+          <Input
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Lebensmittel suchen …"
+            className="pl-11"
+            type="search"
+            enterKeyHint="search"
+          />
+        </div>
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.92 }}
+          onClick={onScan}
+          className="flex w-[52px] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-300 to-brand-500 text-surface-950 shadow-glow"
+          aria-label="Barcode scannen"
+          title="Barcode scannen"
+        >
+          <IconBarcode size={24} strokeWidth={2} />
+        </motion.button>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -490,9 +565,15 @@ function CreateFoodForm({
   loading,
   onBack,
   onSubmit,
+  barcode,
+  notice,
+  onScanAgain,
 }: {
   loading: boolean;
   onBack: () => void;
+  barcode?: string;
+  notice?: string;
+  onScanAgain?: () => void;
   onSubmit: (v: {
     name: string;
     brand: string;
@@ -501,6 +582,7 @@ function CreateFoodForm({
     carbs_100: number;
     fat_100: number;
     default_amount_g: number;
+    barcode?: string | null;
   }) => void;
 }) {
   const [name, setName] = useState('');
@@ -527,12 +609,32 @@ function CreateFoodForm({
           carbs_100: toNum(c),
           fat_100: toNum(f),
           default_amount_g: toNum(portion) || 100,
+          barcode: barcode ?? null,
         });
       }}
     >
-      <p className="text-sm muted">
-        Wird in der gemeinsamen Bibliothek gespeichert – so kann es jeder in der App wiederverwenden.
-      </p>
+      {notice ? (
+        <div className="flex gap-3 rounded-2xl bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+          <IconBarcode size={20} className="mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p>{notice}</p>
+            {onScanAgain && (
+              <button type="button" onClick={onScanAgain} className="mt-1 font-semibold underline">
+                Nochmal scannen
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm muted">
+          Wird in der gemeinsamen Bibliothek gespeichert – so kann es jeder in der App wiederverwenden.
+        </p>
+      )}
+      {barcode && (
+        <p className="text-xs muted">
+          Barcode: <span className="font-semibold num tracking-wider">{barcode}</span>
+        </p>
+      )}
       <Field label="Name">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Magerquark" maxLength={120} autoFocus />
       </Field>

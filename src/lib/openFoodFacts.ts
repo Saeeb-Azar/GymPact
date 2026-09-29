@@ -64,12 +64,20 @@ export async function searchOpenFoodFacts(term: string, signal?: AbortSignal): P
 }
 
 export async function lookupBarcode(code: string, signal?: AbortSignal): Promise<OffProduct | null> {
-  const res = await fetch(
-    `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`,
-    { signal },
-  );
-  if (!res.ok) return null;
-  const json = (await res.json()) as { status?: number; product?: OffRaw };
-  if (json.status !== 1 || !json.product) return null;
-  return mapOffProduct({ ...json.product, code });
+  // UPC-A (12-stellig) ist bei Open Food Facts meist als EAN-13 mit führender 0 gespeichert
+  const candidates = code.length === 12 ? [code, `0${code}`] : [code];
+  for (const c of candidates) {
+    const res = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(c)}.json?fields=${FIELDS}`,
+      { signal },
+    );
+    if (res.status === 404) continue;
+    if (!res.ok) throw new Error('Open Food Facts nicht erreichbar');
+    const json = (await res.json()) as { status?: number; product?: OffRaw };
+    if (json.status === 1 && json.product) {
+      const p = mapOffProduct({ ...json.product, code: c });
+      if (p) return p;
+    }
+  }
+  return null;
 }
