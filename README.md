@@ -161,8 +161,8 @@ supabase/migrations/0009_tracker.sql   # Tracker-Schema (Update bestehender Proj
 - `copy_training_week` läuft als SECURITY INVOKER (RLS greift),
   `admin_user_overview` prüft `is_app_admin()` und liefert nur Zählwerte.
 - Keine Service-Role-Keys im Frontend. Validierung doppelt: Client + DB-Checks.
-- Die Edge Functions `send-push`/`auto-reminders` aus der Challenge-Zeit
-  werden von der App nicht mehr verwendet und können gelöscht werden.
+- Altlasten der früheren Challenge-App (Gruppen-Tabellen, Edge Functions)
+  wurden entfernt (Migration `0013_cleanup_group_schema.sql`).
 
 ## Lokale Entwicklung
 
