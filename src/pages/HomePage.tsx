@@ -132,12 +132,16 @@ export function HomePage() {
               {workouts.map((w) => (
                 <span
                   key={w.id}
-                  className={`flex h-7 flex-1 items-center justify-center rounded-lg text-[10px] font-bold ${
+                  className={`flex h-7 min-w-0 flex-1 items-center justify-center rounded-lg px-1.5 text-[10px] font-bold ${
                     w.done_at ? 'bg-brand-600 text-white dark:bg-brand-500 dark:text-surface-950' : 'bg-surface-100 muted dark:bg-white/[0.06]'
                   }`}
                   title={w.name}
                 >
-                  {w.done_at ? <IconCheck size={14} strokeWidth={3} /> : w.name.slice(0, 3)}
+                  {w.done_at ? (
+                    <IconCheck size={14} strokeWidth={3} />
+                  ) : (
+                    <span className="truncate">{w.name}</span>
+                  )}
                 </span>
               ))}
             </div>
