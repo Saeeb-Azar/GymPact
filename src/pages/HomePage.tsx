@@ -15,6 +15,7 @@ import {
 import { useTrainingWeek } from '@/hooks/training';
 import { DaySummary } from '@/components/nutrition/DaySummary';
 import { WaterCard } from '@/components/nutrition/WaterCard';
+import { WeightCard } from '@/components/nutrition/WeightCard';
 import { Stagger, staggerChild } from '@/components/ui/motion';
 import { IconBody, IconCheck, IconChevronRight, IconDumbbell, IconFood } from '@/components/icons';
 
@@ -179,7 +180,7 @@ export function HomePage() {
             }`}
           >
             {weightDelta === null
-              ? 'Trag dein Gewicht unter „Essen“ ein'
+              ? 'Unten eintragen – täglich für den Trend'
               : `${weightDelta > 0 ? '+' : ''}${weightDelta.toLocaleString('de-DE', { maximumFractionDigits: 1 })} kg in 30 Tagen`}
           </p>
         </Link>
@@ -187,6 +188,10 @@ export function HomePage() {
 
       <motion.div variants={staggerChild}>
         <WaterCard date={today} goalMl={goals?.water_ml ?? 3000} />
+      </motion.div>
+
+      <motion.div variants={staggerChild}>
+        <WeightCard date={today} />
       </motion.div>
     </Stagger>
   );

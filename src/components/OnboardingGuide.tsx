@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthProvider';
 import { Button } from './ui/basics';
-import { IconChart, IconDumbbell, IconFood, IconSparkles } from './icons';
+import { BodySetupForm } from './BodySetupForm';
+import { IconChart, IconDumbbell, IconFood, IconScale, IconSparkles } from './icons';
 
 const STORAGE_PREFIX = 'gympact-onboarding-v2-';
 
@@ -55,8 +56,12 @@ const STEPS = [
 export function OnboardingGuide({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
-  const last = step === STEPS.length - 1;
-  const s = STEPS[step];
+  // Nach den Info-Seiten folgt der Einrichtungs-Schritt „Deine Werte“ –
+  // damit niemand mit den anonymen Standardzielen startet.
+  const setupStep = STEPS.length;
+  const isSetup = step === setupStep;
+  const lastInfo = step === STEPS.length - 1;
+  const s = STEPS[Math.min(step, STEPS.length - 1)];
 
   const finish = () => {
     if (user) markSeen(user.id);
@@ -65,7 +70,7 @@ export function OnboardingGuide({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-surface-50 dark:bg-surface-950"
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-surface-50 dark:bg-surface-950"
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-6">
@@ -75,35 +80,65 @@ export function OnboardingGuide({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -40 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              className="flex flex-col items-center"
-            >
-              <div style={{ perspective: 600 }}>
-                <motion.div
-                  className={`flex h-44 w-44 items-center justify-center rounded-[2.5rem] bg-gradient-to-br ${s.gradient} text-surface-900 shadow-2xl backdrop-blur dark:text-white`}
-                  initial={{ rotateY: -20, rotateX: 10, opacity: 0 }}
-                  animate={{ rotateY: 0, rotateX: 0, opacity: 1 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ transformStyle: 'preserve-3d' }}
-                >
-                  <s.icon size={72} strokeWidth={1.4} style={{ transform: 'translateZ(40px)' }} />
-                </motion.div>
+        {isSetup ? (
+          <motion.div
+            key="setup"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+            className="flex flex-1 flex-col"
+          >
+            <div className="mb-5 flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-600 dark:text-brand-400">
+                <IconScale size={24} />
+              </span>
+              <div>
+                <h1 className="font-display text-xl font-bold">Deine Werte</h1>
+                <p className="text-sm muted">
+                  Daraus berechnen wir deine Kalorien- und Makroziele.
+                </p>
               </div>
-              <h1 className="mt-10 font-display text-2xl font-bold">{s.title}</h1>
-              <p className="mt-3 text-base leading-relaxed muted">{s.text}</p>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+            </div>
+            <BodySetupForm submitLabel="Speichern & los geht’s" onDone={finish} />
+            <button
+              type="button"
+              onClick={finish}
+              className="touch-target mt-3 w-full text-center text-sm font-medium muted"
+            >
+              Später eintragen (Standardwerte verwenden)
+            </button>
+          </motion.div>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                className="flex flex-col items-center"
+              >
+                <div style={{ perspective: 600 }}>
+                  <motion.div
+                    className={`flex h-44 w-44 items-center justify-center rounded-[2.5rem] bg-gradient-to-br ${s.gradient} text-surface-900 shadow-2xl backdrop-blur dark:text-white`}
+                    initial={{ rotateY: -20, rotateX: 10, opacity: 0 }}
+                    animate={{ rotateY: 0, rotateX: 0, opacity: 1 }}
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ transformStyle: 'preserve-3d' }}
+                  >
+                    <s.icon size={72} strokeWidth={1.4} style={{ transform: 'translateZ(40px)' }} />
+                  </motion.div>
+                </div>
+                <h1 className="mt-10 font-display text-2xl font-bold">{s.title}</h1>
+                <p className="mt-3 text-base leading-relaxed muted">{s.text}</p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
 
-        <div className="mb-6 flex justify-center gap-2">
-          {STEPS.map((_, i) => (
+        <div className="mb-6 mt-4 flex justify-center gap-2">
+          {[...STEPS, null].map((_, i) => (
             <motion.span
               key={i}
               className="h-2 rounded-full bg-brand-500"
@@ -111,9 +146,11 @@ export function OnboardingGuide({ onClose }: { onClose: () => void }) {
             />
           ))}
         </div>
-        <Button onClick={() => (last ? finish() : setStep(step + 1))} className="w-full">
-          {last ? 'Los geht’s' : 'Weiter'}
-        </Button>
+        {!isSetup && (
+          <Button onClick={() => setStep(step + 1)} className="w-full">
+            {lastInfo ? 'Weiter zu deinen Werten' : 'Weiter'}
+          </Button>
+        )}
       </div>
     </div>
   );

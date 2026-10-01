@@ -354,6 +354,9 @@ function CalculatorSheet({
   onApply: (g: ReturnType<typeof suggestGoals>) => void;
 }) {
   const { data: latest } = useLatestWeight();
+  const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
+  const currentYear = new Date().getFullYear();
   const [sex, setSex] = useState<Sex>('male');
   const [age, setAge] = useState('25');
   const [height, setHeight] = useState('180');
@@ -365,11 +368,30 @@ function CalculatorSheet({
     if (open && !weight && latest) setWeight(String(latest.kg));
   }, [open, latest, weight]);
 
+  // Gespeicherte Körperdaten aus dem Profil vorbefüllen
+  useEffect(() => {
+    if (!open || !profile) return;
+    if (profile.sex) setSex(profile.sex);
+    if (profile.birth_year) setAge(String(currentYear - profile.birth_year));
+    if (profile.height_cm) setHeight(String(profile.height_cm));
+  }, [open, profile, currentYear]);
+
   const n = (s: string) => Number(s.replace(',', '.')) || 0;
   const ok = n(age) >= 14 && n(age) <= 100 && n(height) >= 120 && n(height) <= 230 && n(weight) >= 35 && n(weight) <= 300;
   const result = ok
     ? suggestGoals({ sex, age: n(age), heightCm: n(height), weightKg: n(weight), activity, goal })
     : null;
+
+  const apply = () => {
+    if (!result) return;
+    // Körperdaten fürs nächste Mal merken (Fehler hier sind unkritisch)
+    updateProfile.mutate({
+      sex,
+      height_cm: Math.round(n(height)),
+      birth_year: currentYear - Math.round(n(age)),
+    });
+    onApply(result);
+  };
 
   return (
     <Sheet open={open} onClose={onClose} title="Bedarfsrechner">
@@ -434,7 +456,7 @@ function CalculatorSheet({
         <p className="text-xs muted">
           Schätzung nach Mifflin-St Jeor. Protein 2–2,2 g/kg, Fett 0,9 g/kg, Rest Kohlenhydrate.
         </p>
-        <Button className="w-full" disabled={!result} onClick={() => result && onApply(result)}>
+        <Button className="w-full" disabled={!result} onClick={apply}>
           Übernehmen
         </Button>
       </div>

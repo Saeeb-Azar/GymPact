@@ -25,6 +25,9 @@ export type ProfileRow = {
   display_name: string;
   avatar_url: string | null;
   timezone: string;
+  height_cm: number | null;
+  birth_year: number | null;
+  sex: 'male' | 'female' | null;
   created_at: string;
   updated_at: string;
 };
